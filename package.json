@@ -1,0 +1,18 @@
+{
+  "name": "memorix",
+  "version": "1.0.0",
+  "description": "AI Long-Term Memory System with SQLite FTS5",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["mcp", "memory", "fts5", "sqlite"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@modelcontextprotocol/server": "^2.0.0-alpha.2",
+    "better-sqlite3": "^12.8.0"
+  }
+}
