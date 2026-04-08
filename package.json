@@ -9,10 +9,45 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": ["mcp", "memory", "fts5", "sqlite"],
-  "author": "",
-  "license": "ISC",
+  "author": "OpenClaw Labs Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/openclaw-labs/memorix.git"
+  },
   "dependencies": {
     "@modelcontextprotocol/server": "^2.0.0-alpha.2",
     "better-sqlite3": "^12.8.0"
+  },
+  "openclaw": {
+    "skillName": "memorix",
+    "displayName": "Memorix - AI Long-Term Memory",
+    "description": "AI-powered long-term memory system with SQLite FTS5 full-text search and Temporal Triples for semantic relationship tracking. Enables persistent, searchable memory for AI agents.",
+    "category": "memory",
+    "entryPoint": "src/server.js",
+    "mcpServers": {
+      "memorix": {
+        "command": "node",
+        "args": ["${__dirname}/src/server.js"],
+        "env": {}
+      }
+    },
+    "permissions": [
+      "filesystem"
+    ],
+    "config": {
+      "dbPath": {
+        "type": "string",
+        "description": "Path to SQLite database file",
+        "default": "memorix.db",
+        "required": false
+      },
+      "maxMemoryItems": {
+        "type": "number",
+        "description": "Maximum number of memory items to store",
+        "default": 10000,
+        "required": false
+      }
+    }
   }
 }
