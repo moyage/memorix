@@ -189,14 +189,44 @@ function createServer() {
     };
   });
 
+  const MAX_FIELD_LENGTH = 10000;
+  const MAX_QUERY_LENGTH = 5000;
+
+  function validateString(value, fieldName, maxLen = MAX_FIELD_LENGTH) {
+    if (typeof value !== 'string') {
+      throw new Error(`${fieldName} must be a string`);
+    }
+    if (value.length > maxLen) {
+      throw new Error(`${fieldName} exceeds maximum length of ${maxLen}`);
+    }
+    return value.trim();
+  }
+
+  function sanitizeFtsQuery(query) {
+    if (!query || typeof query !== 'string') {
+      return null;
+    }
+    let sanitized = query.slice(0, MAX_QUERY_LENGTH);
+    const openQuotes = (sanitized.match(/"/g) || []).length;
+    if (openQuotes % 2 !== 0) {
+      sanitized = sanitized.replace(/"/g, '');
+    }
+    sanitized = sanitized.replace(/\\/g, '');
+    return sanitized.trim() || null;
+  }
+
   server.setRequestHandler('tools/call', async ({ name, arguments: args }) => {
+    try {
     if (name === 'memorix_store_fact') {
+      const subject = validateString(args.subject, 'subject');
+      const predicate = validateString(args.predicate, 'predicate');
+      const object = validateString(args.object, 'object');
       const id = generateUUID();
       const stmt = db.prepare(`
         INSERT INTO facts (id, subject, predicate, object, context_tags, source)
         VALUES (?, ?, ?, ?, ?, ?)
       `);
-      stmt.run(id, args.subject, args.predicate, args.object, args.context_tags || null, args.source || null);
+      stmt.run(id, subject, predicate, object, args.context_tags || null, args.source || null);
       
       return {
         content: [{
@@ -207,6 +237,9 @@ function createServer() {
     }
 
     if (name === 'memorix_store_facts') {
+      if (!Array.isArray(args.facts) || args.facts.length === 0) {
+        throw new Error('facts must be a non-empty array');
+      }
       const insertStmt = db.prepare(`
         INSERT INTO facts (id, subject, predicate, object, context_tags, source)
         VALUES (?, ?, ?, ?, ?, ?)
@@ -214,8 +247,11 @@ function createServer() {
       
       const insertMany = db.transaction((facts) => {
         for (const fact of facts) {
+          const subject = validateString(fact.subject, 'subject');
+          const predicate = validateString(fact.predicate, 'predicate');
+          const object = validateString(fact.object, 'object');
           const id = generateUUID();
-          insertStmt.run(id, fact.subject, fact.predicate, fact.object, fact.context_tags || null, fact.source || null);
+          insertStmt.run(id, subject, predicate, object, fact.context_tags || null, fact.source || null);
         }
       });
       
@@ -231,8 +267,16 @@ function createServer() {
 
     if (name === 'memorix_search_fts') {
       const limit = args.limit || 10;
-      let query = args.query;
-      let params = [query, limit];
+      const sanitizedQuery = sanitizeFtsQuery(args.query);
+      if (!sanitizedQuery) {
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({ isError: true, error: 'Query is required and must be a valid string' })
+          }]
+        };
+      }
+      let params = [sanitizedQuery, limit];
       
       let sql = `
         SELECT f.id, f.subject, f.predicate, f.object, f.context_tags, f.source, f.valid_from
@@ -246,19 +290,29 @@ function createServer() {
         const tags = args.context_tags.split(',').map(t => t.trim());
         const tagConditions = tags.map(() => `f.context_tags LIKE ?`).join(' AND ');
         sql += ` AND (${tagConditions})`;
-        params = [query, limit, ...tags.map(t => `%${t}%`)];
+        params = [sanitizedQuery, limit, ...tags.map(t => `%${t}%`)];
       }
       
       sql += ` ORDER BY rank LIMIT ?`;
-      const stmt = db.prepare(sql);
-      const results = stmt.all(...params);
-      
-      return {
-        content: [{
-          type: 'text',
-          text: JSON.stringify(results)
-        }]
-      };
+      try {
+        const stmt = db.prepare(sql);
+        const results = stmt.all(...params);
+        
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify(results)
+          }]
+        };
+      } catch (ftsError) {
+        console.error('[Memorix FTS5 Error]', ftsError.message);
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({ isError: true, error: 'Search failed. Invalid query syntax.' })
+          }]
+        };
+      }
     }
 
     if (name === 'memorix_invalidate_fact') {
@@ -362,6 +416,15 @@ function createServer() {
     }
 
     throw new Error(`Unknown tool: ${name}`);
+    } catch (error) {
+      console.error('[Memorix Error]', error.message);
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({ isError: true, error: 'Internal server error', message: error.message })
+        }]
+      };
+    }
   });
 
   return server;

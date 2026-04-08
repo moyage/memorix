@@ -1,6 +1,6 @@
 {
   "name": "memorix",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "AI Long-Term Memory System with SQLite FTS5",
   "main": "src/server.js",
   "type": "commonjs",
@@ -13,13 +13,17 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/openclaw-labs/memorix.git"
+    "url": "git+https://github.com/moyage/memorix.git"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "^2.0.0-alpha.2",
     "better-sqlite3": "^12.8.0"
   },
   "openclaw": {
+    "publisher": "moyage",
     "skillName": "memorix",
     "displayName": "Memorix - AI Long-Term Memory",
     "description": "AI-powered long-term memory system with SQLite FTS5 full-text search and Temporal Triples for semantic relationship tracking. Enables persistent, searchable memory for AI agents.",
