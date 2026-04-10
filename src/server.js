@@ -1,6 +1,5 @@
-const { Server } = require('@modelcontextprotocol/server');
-const { StdioServerTransport } = require('@modelcontextprotocol/server/stdio');
-const { getDatabase } = require('./schema');
+import { Server, StdioServerTransport } from '@modelcontextprotocol/server';
+import { getDatabase } from './schema.js';
 
 function generateUUID() {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -174,6 +173,34 @@ function createServer() {
     }
   };
 
+  const autoMemorizeTool = {
+    name: 'memorix_auto_memorize',
+    description: `Automatically extract subject-predicate-object triples from long text and store them as facts.
+
+**Arguments**:
+- text (string): Long text to analyze and extract triples from
+- context_tags (string, optional): Tags to apply to all extracted facts
+- source (string, optional): Origin or context of the text
+
+**Behavior**: Parses text using pattern heuristics to identify semantic relationships (e.g., "X is Y", "X has Y", "X prefers Y", "X uses Y"), validates extracted triples, and stores them in the database.
+
+**Use Case**: Bulk ingestion of knowledge from documents, notes, or conversations without manual triple extraction.
+
+**Example**:
+- Input: "Alice is a software engineer. She prefers dark mode. She uses VS Code."
+- Extracted: [(Alice, is, software engineer), (Alice, prefers, dark mode), (Alice, uses, VS Code)]
+- Output: { extracted: 3, stored: 3, triples: [...] }`,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'Long text to analyze and extract triples from' },
+        context_tags: { type: 'string', description: 'Tags to apply to all extracted facts', optional: true },
+        source: { type: 'string', description: 'Origin or context of the text', optional: true }
+      },
+      required: ['text']
+    }
+  };
+
   const server = new Server({
     name: 'memorix',
     version: '2.0.0'
@@ -185,7 +212,7 @@ function createServer() {
 
   server.setRequestHandler('tools/list', async () => {
     return {
-      tools: [storeFactTool, storeFactsTool, searchFtsTool, invalidateFactTool, queryHistoryTool, traceRelationsTool]
+      tools: [storeFactTool, storeFactsTool, searchFtsTool, invalidateFactTool, queryHistoryTool, traceRelationsTool, autoMemorizeTool]
     };
   });
 
@@ -213,6 +240,102 @@ function createServer() {
     }
     sanitized = sanitized.replace(/\\/g, '');
     return sanitized.trim() || null;
+  }
+
+  function extractTriples(text) {
+    const triples = [];
+    const sentences = text.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 0);
+
+    const patterns = [
+      // "X is Y" patterns (including variations like "was", "are", "were")
+      {
+        regex: /\b(\w[\w\s]*?)\s+(?:is|was|are|were)\s+(.+?)(?:\s+(?:and|but|or|so|because|if|when|in|at|on|with|for|from|to|about|of|as|than|that|which|who|what|where|how|why)\s+|$)/i,
+        predicate: 'is'
+      },
+      // "X has Y" patterns
+      {
+        regex: /\b(\w[\w\s]*?)\s+(?:has|have|had)\s+(.+?)(?:\s+(?:and|but|or|so|because|if|when|in|at|on|with|for|from|to|about|of|as|than|that|which|who|what|where|how|why)\s+|$)/i,
+        predicate: 'has'
+      },
+      // "X prefers Y" patterns
+      {
+        regex: /\b(\w[\w\s]*?)\s+(?:prefers?|liked?|loves?|enjoys?)\s+(.+?)(?:\s+(?:and|but|or|so|because|if|when|in|at|on|with|for|from|to|about|of|as|than|that|which|who|what|where|how|why)\s+|$)/i,
+        predicate: 'prefers'
+      },
+      // "X uses Y" patterns
+      {
+        regex: /\b(\w[\w\s]*?)\s+(?:uses?|utilizes?|employs?)\s+(.+?)(?:\s+(?:and|but|or|so|because|if|when|in|at|on|with|for|from|to|about|of|as|than|that|which|who|what|where|how|why)\s+|$)/i,
+        predicate: 'uses'
+      },
+      // "X works at/for Y" patterns
+      {
+        regex: /\b(\w[\w\s]*?)\s+(?:works?|worked)\s+(?:at|for|with)\s+(.+?)(?:\s+(?:and|but|or|so|because|if|when|in|at|on|with|for|from|to|about|of|as|than|that|which|who|what|where|how|why)\s+|$)/i,
+        predicate: 'works_at'
+      },
+      // "X wants Y" patterns
+      {
+        regex: /\b(\w[\w\s]*?)\s+(?:wants?|needs?|requires?)\s+(.+?)(?:\s+(?:and|but|or|so|because|if|when|in|at|on|with|for|from|to|about|of|as|than|that|which|who|what|where|how|why)\s+|$)/i,
+        predicate: 'wants'
+      },
+      // "X knows Y" patterns
+      {
+        regex: /\b(\w[\w\s]*?)\s+(?:knows?|knew|understands?)\s+(.+?)(?:\s+(?:and|but|or|so|because|if|when|in|at|on|with|for|from|to|about|of|as|than|that|which|who|what|where|how|why)\s+|$)/i,
+        predicate: 'knows'
+      },
+      // "X lives in Y" patterns
+      {
+        regex: /\b(\w[\w\s]*?)\s+(?:lives?|lived|resides?)\s+(?:in|at|on)\s+(.+?)(?:\s+(?:and|but|or|so|because|if|when|in|at|on|with|for|from|to|about|of|as|than|that|which|who|what|where|how|why)\s+|$)/i,
+        predicate: 'lives_in'
+      }
+    ];
+
+    for (const sentence of sentences) {
+      for (const pattern of patterns) {
+        const match = sentence.match(pattern.regex);
+        if (match) {
+          let subject = match[1].trim();
+          let object = match[2].trim();
+
+          // Clean up subject (remove leading "the", "a", "an" if present)
+          subject = subject.replace(/^(?:the|a|an)\s+/i, '').trim();
+          object = object.replace(/^(?:the|a|an)\s+/i, '').trim();
+
+          // Validate triple quality
+          if (subject.length >= 2 && object.length >= 2 && subject.length <= 100 && object.length <= 200) {
+            // Check for pronoun resolution context (simple heuristic)
+            if (/^(he|she|it|they|we|this|that|these|those)$/i.test(subject)) {
+              // Try to find the last proper noun in previous sentences
+              for (let i = sentences.indexOf(sentence) - 1; i >= 0; i--) {
+                const prevSentence = sentences[i];
+                const properNounMatch = prevSentence.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\b/);
+                if (properNounMatch) {
+                  subject = properNounMatch[1];
+                  break;
+                }
+              }
+            }
+
+            // Check if this triple is not a duplicate
+            const isDuplicate = triples.some(t =>
+              t.subject.toLowerCase() === subject.toLowerCase() &&
+              t.predicate === pattern.predicate &&
+              t.object.toLowerCase() === object.toLowerCase()
+            );
+
+            if (!isDuplicate) {
+              triples.push({
+                subject: subject,
+                predicate: pattern.predicate,
+                object: object
+              });
+            }
+          }
+          break; // Only extract one pattern per sentence
+        }
+      }
+    }
+
+    return triples;
   }
 
   server.setRequestHandler('tools/call', async ({ name, arguments: args }) => {
@@ -411,6 +534,55 @@ function createServer() {
         content: [{
           type: 'text',
           text: JSON.stringify(results)
+        }]
+      };
+    }
+
+    if (name === 'memorix_auto_memorize') {
+      const text = validateString(args.text, 'text');
+      if (!text || text.length < 3) {
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({ isError: true, error: 'Text must be at least 3 characters long' })
+          }]
+        };
+      }
+
+      const extractedTriples = extractTriples(text);
+
+      if (extractedTriples.length === 0) {
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({ success: true, extracted: 0, stored: 0, triples: [], message: 'No valid triples found in the provided text' })
+          }]
+        };
+      }
+
+      const insertStmt = db.prepare(`
+        INSERT INTO facts (id, subject, predicate, object, context_tags, source)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `);
+
+      const insertMany = db.transaction((facts) => {
+        for (const fact of facts) {
+          const id = generateUUID();
+          insertStmt.run(id, fact.subject, fact.predicate, fact.object, args.context_tags || null, args.source || null);
+        }
+      });
+
+      insertMany(extractedTriples);
+
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            success: true,
+            extracted: extractedTriples.length,
+            stored: extractedTriples.length,
+            triples: extractedTriples
+          })
         }]
       };
     }

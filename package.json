@@ -2,13 +2,22 @@
   "name": "memorix",
   "version": "2.0.0",
   "description": "AI Long-Term Memory System with SQLite FTS5",
-  "main": "src/server.js",
-  "type": "commonjs",
+  "main": "dist/server.js",
+  "type": "module",
   "scripts": {
-    "start": "node src/server.js",
+    "build": "node build.js",
+    "prestart": "npm run build",
+    "start": "node dist/server.js",
+    "dev": "node src/server.js",
+    "view": "node scripts/view-db.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["mcp", "memory", "fts5", "sqlite"],
+  "keywords": [
+    "mcp",
+    "memory",
+    "fts5",
+    "sqlite"
+  ],
   "author": "OpenClaw Labs Team",
   "license": "MIT",
   "repository": {
@@ -19,6 +28,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "@cfworker/json-schema": "^4.1.1",
     "@modelcontextprotocol/server": "^2.0.0-alpha.2",
     "better-sqlite3": "^12.8.0"
   },
@@ -28,11 +38,13 @@
     "displayName": "Memorix - AI Long-Term Memory",
     "description": "AI-powered long-term memory system with SQLite FTS5 full-text search and Temporal Triples for semantic relationship tracking. Enables persistent, searchable memory for AI agents.",
     "category": "memory",
-    "entryPoint": "src/server.js",
+    "entryPoint": "dist/server.js",
     "mcpServers": {
       "memorix": {
         "command": "node",
-        "args": ["${__dirname}/src/server.js"],
+        "args": [
+          "${__dirname}/dist/server.js"
+        ],
         "env": {}
       }
     },
@@ -53,5 +65,8 @@
         "required": false
       }
     }
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.0"
   }
 }
