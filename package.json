@@ -18,11 +18,11 @@
     "fts5",
     "sqlite"
   ],
-  "author": "OpenClaw Labs Team",
+  "author": "",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/moyage/memorix.git"
+    "url": ""
   },
   "engines": {
     "node": ">=18.0.0"
@@ -31,40 +31,6 @@
     "@cfworker/json-schema": "^4.1.1",
     "@modelcontextprotocol/server": "^2.0.0-alpha.2",
     "better-sqlite3": "^12.8.0"
-  },
-  "openclaw": {
-    "publisher": "moyage",
-    "skillName": "memorix",
-    "displayName": "Memorix - AI Long-Term Memory",
-    "description": "AI-powered long-term memory system with SQLite FTS5 full-text search and Temporal Triples for semantic relationship tracking. Enables persistent, searchable memory for AI agents.",
-    "category": "memory",
-    "entryPoint": "dist/server.js",
-    "mcpServers": {
-      "memorix": {
-        "command": "node",
-        "args": [
-          "${__dirname}/dist/server.js"
-        ],
-        "env": {}
-      }
-    },
-    "permissions": [
-      "filesystem"
-    ],
-    "config": {
-      "dbPath": {
-        "type": "string",
-        "description": "Path to SQLite database file",
-        "default": "memorix.db",
-        "required": false
-      },
-      "maxMemoryItems": {
-        "type": "number",
-        "description": "Maximum number of memory items to store",
-        "default": 10000,
-        "required": false
-      }
-    }
   },
   "devDependencies": {
     "esbuild": "^0.28.0"
