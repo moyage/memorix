@@ -33,7 +33,9 @@ const MIGRATIONS = [
           console.log('[Schema] Added context_tags column successfully');
         }
         
-        // Drop and recreate FTS table to include context_tags (content is rebuilt from facts)
+        // Rebuild FTS table to include context_tags by dropping and recreating
+        // This is necessary because FTS5 virtual tables cannot be altered
+        // The content will be automatically rebuilt from the facts table by the triggers
         db.exec(`DROP TABLE IF EXISTS facts_fts`);
       } else {
         // Fresh database - create the main facts table with full schema
