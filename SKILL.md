@@ -42,7 +42,7 @@ Memorix exposes itself as an MCP (Model Context Protocol) server. Available tool
 // Request
 tools/list
 
-// Response includes 7 memory tools
+// Response includes 24 memory tools
 ```
 
 ---
@@ -60,7 +60,8 @@ Store a single temporal triple into memory.
   "predicate": "string (required) - Relationship or action",
   "object": "string (required) - Target or value",
   "context_tags": "string (optional) - Comma-separated tags for filtering",
-  "source": "string (optional) - Origin or context path"
+  "source": "string (optional) - Origin or context path",
+  "replace_existing": "boolean (optional) - Invalidate active facts with same subject+predicate before insert"
 }
 ```
 
@@ -74,7 +75,10 @@ Store a single temporal triple into memory.
 ```json
 {
   "success": true,
-  "id": "uuid-of-stored-fact"
+  "id": "uuid-of-stored-fact",
+  "inserted": true,
+  "deduplicated": false,
+  "invalidated": 0
 }
 ```
 
@@ -93,9 +97,11 @@ Batch store multiple temporal triples in a single transaction.
       "predicate": "string (required)",
       "object": "string (required)",
       "context_tags": "string (optional)",
-      "source": "string (optional)"
+      "source": "string (optional)",
+      "replace_existing": "boolean (optional)"
     }
-  ]
+  ],
+  "replace_existing": "boolean (optional) - default policy for all facts in this batch"
 }
 ```
 
@@ -103,7 +109,10 @@ Batch store multiple temporal triples in a single transaction.
 ```json
 {
   "success": true,
-  "count": 42
+  "count": 42,
+  "inserted": 40,
+  "deduplicated": 2,
+  "invalidated": 5
 }
 ```
 
@@ -143,7 +152,8 @@ Search memory using FTS5 full-text search.
     "object": "iPhone 16",
     "context_tags": "product,mobile",
     "source": "meeting_notes.md",
-    "valid_from": "2026-01-15T10:30:00Z"
+    "valid_from": "2026-01-15T10:30:00Z",
+    "quality_score": 0.87
   }
 ]
 ```
@@ -237,7 +247,8 @@ Automatically extract subject-predicate-object triples from long text.
 {
   "text": "string (required) - Unstructured text to analyze",
   "context_tags": "string (optional) - Tags for all extracted facts",
-  "source": "string (optional) - Origin of the text"
+  "source": "string (optional) - Origin of the text",
+  "replace_existing": "boolean (optional) - Invalidate active facts with same subject+predicate before insert"
 }
 ```
 
@@ -261,9 +272,463 @@ Automatically extract subject-predicate-object triples from long text.
   "success": true,
   "extracted": 3,
   "stored": 3,
+  "deduplicated": 0,
+  "invalidated": 0,
   "triples": [
     {"subject": "Alice", "predicate": "is", "object": "software engineer"}
   ]
+}
+```
+
+---
+
+### 8. `memorix_get_context_pack`
+
+Build a compact memory context pack for reinjection into constrained context windows.
+
+**Input Schema:**
+```json
+{
+  "query": "string (optional) - FTS query for scoped retrieval",
+  "subject": "string (optional) - Restrict to a single subject",
+  "context_tags": "string (optional) - Tag filter",
+  "limit": "integer (optional, default: 20) - Retrieved rows before compaction",
+  "per_subject_limit": "integer (optional, default: 4) - Max facts per subject in compact output",
+  "token_budget": "integer (optional) - Approximate output token budget",
+  "since_valid_from": "string (optional) - Incremental lower bound timestamp",
+  "cursor": "object|string (optional) - deterministic pagination cursor from previous response",
+  "prioritize_contradictions": "boolean (optional) - Boost contradiction groups in ranking"
+}
+```
+
+**Output:**
+```json
+{
+  "success": true,
+  "input_count": 12,
+  "grouped_subjects": 4,
+  "lines": 4,
+  "text": "- Alice: prefers=dark mode; uses=VS Code\n- ProjectX: status=in_progress",
+  "trimmed": false,
+  "facts": [
+    {"subject":"Alice","predicate":"prefers","object":"dark mode","quality_score":0.91}
+  ]
+}
+```
+
+---
+
+### 9. `memorix_import_markdown`
+
+Import OpenClaw-style markdown memory content into Memorix.
+
+**Input Schema:**
+```json
+{
+  "text": "string (optional) - Raw markdown content",
+  "source_path": "string (optional) - Local markdown file path",
+  "context_tags": "string (optional) - Tags for imported facts",
+  "source": "string (optional) - Source override",
+  "replace_existing": "boolean (optional) - Replacement policy for mutable predicates"
+}
+```
+
+**Output:**
+```json
+{
+  "success": true,
+  "imported": 24,
+  "inserted": 20,
+  "deduplicated": 4,
+  "invalidated": 3
+}
+```
+
+---
+
+### 10. `memorix_export_markdown`
+
+Export active facts as markdown for OpenClaw memory workflows.
+
+**Input Schema:**
+```json
+{
+  "subject": "string (optional) - Filter by subject",
+  "context_tags": "string (optional) - Filter by tags",
+  "limit": "integer (optional, default: 100)",
+  "mode": "string (optional) - memory (grouped) or daily (chronological)"
+}
+```
+
+**Output:**
+```json
+{
+  "success": true,
+  "mode": "memory",
+  "count": 12,
+  "markdown": "- Alice: prefers=dark mode; uses=VS Code"
+}
+```
+
+---
+
+### 11. `memorix_get_predicate_policies`
+
+Read effective predicate policies.
+
+**Input Schema:**
+```json
+{
+  "predicate": "string (optional) - Read one predicate policy"
+}
+```
+
+**Output:**
+```json
+{
+  "success": true,
+  "count": 4,
+  "policies": [
+    {"predicate":"status","mode":"single","source":"default"}
+  ]
+}
+```
+
+---
+
+### 12. `memorix_set_predicate_policy`
+
+Set predicate policy for drift control.
+
+**Input Schema:**
+```json
+{
+  "predicate": "string (required)",
+  "mode": "string (required) - single or multi"
+}
+```
+
+**Output:**
+```json
+{
+  "success": true,
+  "predicate": "status",
+  "mode": "single"
+}
+```
+
+---
+
+### 13. `memorix_detect_contradictions`
+
+Detect active contradictions for predicates configured as single-value.
+
+**Input Schema:**
+```json
+{
+  "subject": "string (optional)",
+  "predicate": "string (optional)",
+  "limit": "integer (optional, default: 100)"
+}
+```
+
+**Output:**
+```json
+{
+  "success": true,
+  "count": 1,
+  "contradictions": [
+    {"subject":"Alice","predicate":"status","object_count":2,"fact_count":2}
+  ]
+}
+```
+
+---
+
+### 14. `memorix_resolve_contradiction`
+
+Resolve one contradiction by keeping one active fact and invalidating others.
+
+**Input Schema:**
+```json
+{
+  "subject": "string (required)",
+  "predicate": "string (required)",
+  "keep_object": "string (optional)",
+  "keep_latest": "boolean (optional, default: true)"
+}
+```
+
+**Output:**
+```json
+{
+  "success": true,
+  "resolved": true,
+  "resolution_id": "uuid",
+  "kept_fact_id": "uuid",
+  "invalidated": 1
+}
+```
+
+---
+
+### 15. `memorix_rollback_resolution`
+
+Rollback a previous contradiction resolution.
+
+**Input Schema:**
+```json
+{
+  "resolution_id": "string (required)"
+}
+```
+
+**Output:**
+```json
+{
+  "success": true,
+  "rolled_back": true,
+  "reactivated": 2
+}
+```
+
+---
+
+### 16. `memorix_rank_promotion_candidates`
+
+Rank deterministic promotion candidates for durable-memory workflows.
+
+**Input Schema:**
+```json
+{
+  "since_days": "integer (optional, default: 30)",
+  "min_occurrences": "integer (optional, default: 1)",
+  "limit": "integer (optional, default: 50)"
+}
+```
+
+**Output:**
+```json
+{
+  "success": true,
+  "count": 3,
+  "candidates": [
+    {"subject":"ProjectX","predicate":"status","object":"in_progress","promotion_score":0.82}
+  ]
+}
+```
+
+---
+
+### 17. `memorix_get_health_report`
+
+Return health metrics for long-running memory operations.
+
+**Input Schema:**
+```json
+{
+  "stale_days": "integer (optional, default: 180)"
+}
+```
+
+**Output:**
+```json
+{
+  "success": true,
+  "active_facts": 120,
+  "invalidated_facts": 42,
+  "contradiction_groups": 3,
+  "stale_active_facts": 17
+}
+```
+
+---
+
+### 18. `memorix_run_maintenance_sweep`
+
+Run contradiction maintenance with dry-run/apply semantics.
+Strategy selection is automatic and inferred from current memory health signals.
+
+**Input Schema:**
+```json
+{
+  "dry_run": "boolean (optional, default: true)",
+  "limit": "integer (optional, default: 50)",
+  "subject": "string (optional)",
+  "predicate": "string (optional)"
+}
+```
+
+**Output:**
+```json
+{
+  "success": true,
+  "dry_run": true,
+  "planned_actions": 2,
+  "actions": []
+}
+```
+
+---
+
+### 19. `memorix_recommend_compaction`
+
+Recommend whether proactive compaction should run now.
+
+**Input Schema:**
+```json
+{
+  "current_context_tokens": "integer (optional)",
+  "token_threshold": "integer (optional, default: 6000)",
+  "stale_days": "integer (optional, default: 180)",
+  "contradiction_threshold": "integer (optional, default: 1)"
+}
+```
+
+**Output:**
+```json
+{
+  "success": true,
+  "recommend_compaction": true,
+  "reasons": ["context_tokens_ge_6000"],
+  "suggested_context_pack_args": {"token_budget":500,"prioritize_contradictions":true}
+}
+```
+
+---
+
+### 20. `memorix_compact_context_now`
+
+One-shot compaction pipeline that performs recommendation, compaction, and telemetry recording.
+
+**Input Schema:**
+```json
+{
+  "current_context_tokens": "integer (optional)",
+  "token_threshold": "integer (optional, default: 6000)",
+  "query": "string (optional)",
+  "subject": "string (optional)",
+  "context_tags": "string (optional)",
+  "since_valid_from": "string (optional)",
+  "prioritize_contradictions": "boolean (optional, default: true)",
+  "token_budget": "integer (optional, default: 500)",
+  "per_subject_limit": "integer (optional, default: 4)",
+  "limit": "integer (optional, default: 20)",
+  "force": "boolean (optional)"
+}
+```
+
+**Output:**
+```json
+{
+  "success": true,
+  "compacted": true,
+  "compression_ratio": 0.52,
+  "avg_quality_score": 0.81,
+  "text": "- ProjectX: status=in_progress"
+}
+```
+
+---
+
+### 21. `memorix_autotune_compaction_params`
+
+Auto-tune compaction defaults from recent telemetry.
+
+**Input Schema:**
+```json
+{
+  "window": "integer (optional, default: 30)"
+}
+```
+
+**Output:**
+```json
+{
+  "success": true,
+  "token_budget": 520,
+  "per_subject_limit": 4,
+  "avg_compression_ratio": 0.61
+}
+```
+
+---
+
+### 22. `memorix_run_governance_cycle`
+
+Run a unified governance cycle for compaction and contradiction maintenance.
+Maintenance strategy selection is automatic and does not require user input.
+
+**Input Schema:**
+```json
+{
+  "dry_run": "boolean (optional, default: true)",
+  "force_compaction": "boolean (optional)",
+  "run_maintenance": "boolean (optional, default: true)",
+  "current_context_tokens": "integer (optional)",
+  "token_threshold": "integer (optional, default: 6000)",
+  "token_budget": "integer (optional)",
+  "per_subject_limit": "integer (optional)",
+  "limit": "integer (optional, default: 20)",
+  "since_valid_from": "string (optional)",
+  "prioritize_contradictions": "boolean (optional, default: true)"
+}
+```
+
+**Output:**
+```json
+{
+  "success": true,
+  "dry_run": true,
+  "compaction": {"compacted":true},
+  "maintenance": {"planned_actions":2}
+}
+```
+
+---
+
+### 23. `memorix_check_consistency`
+
+Verify active-memory consistency and return repair hints.
+
+**Input Schema:**
+```json
+{
+  "subject": "string (optional)",
+  "predicate": "string (optional)"
+}
+```
+
+**Output:**
+```json
+{
+  "success": true,
+  "consistency_ok": false,
+  "contradiction_groups": 1,
+  "contradiction_repairs": [{"subject":"Alice","predicate":"status"}]
+}
+```
+
+---
+
+### 24. `memorix_get_governance_run`
+
+Read governance run status by run id or idempotency key.
+
+**Input Schema:**
+```json
+{
+  "run_id": "string (optional)",
+  "idempotency_key": "string (optional)"
+}
+```
+
+**Output:**
+```json
+{
+  "success": true,
+  "found": true,
+  "run": {"status":"completed","output_payload":{}}
 }
 ```
 
@@ -311,6 +776,18 @@ When processing long text (meeting notes, command output), use `memorix_auto_mem
 ### 5. Invalidate, Don't Delete
 
 When a fact becomes outdated, use `memorix_invalidate_fact` to preserve audit history rather than ignoring it.
+
+### 6. Use Context Pack Before Long Answers
+
+When session context is large, call `memorix_get_context_pack` first and inject only the returned compact lines into reasoning context.
+
+### 7. Use `replace_existing` for Mutable Facts
+
+For mutable fields (status, location, preference toggles), pass `replace_existing=true` to avoid contradictory active facts.
+
+### 8. Prefer Higher `quality_score` Facts
+
+When multiple candidate facts are returned, prioritize higher `quality_score` values before composing final answers.
 
 ---
 
@@ -408,9 +885,9 @@ const related = await callTool("memorix_trace_relations", {
 
 ## Version
 
-- **Skill Version:** 2.0.0
+- **Skill Version:** 2.1.0
 - **MCP Protocol:** 2.0.0-alpha.2
-- **Database Schema:** 2.0
+- **Database Schema:** 5.0
 
 ---
 

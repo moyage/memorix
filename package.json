@@ -1,6 +1,6 @@
 {
   "name": "memorix",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "AI Long-Term Memory System with SQLite FTS5",
   "main": "dist/server.js",
   "type": "module",
@@ -10,7 +10,7 @@
     "start": "node dist/server.js",
     "dev": "node src/server.js",
     "view": "node scripts/view-db.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test"
   },
   "keywords": [
     "mcp",

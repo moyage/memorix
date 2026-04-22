@@ -269,15 +269,19 @@ function showHelp() {
   console.log('Usage: npm run view [options]');
   console.log();
   console.log('Options:');
-  console.log('  --tree, -t       Show tree view grouped by subject');
+  console.log('  --format MODE    Output mode: table (default) or tree');
+  console.log('  --tree, -t       Alias for --format tree');
+  console.log('  --stats          Show statistics only');
   console.log('  --limit, -l N    Limit facts display to N rows (default: 100)');
   console.log('  --help, -h       Show this help message');
   console.log();
   console.log('Examples:');
   console.log('  npm run view                    # Show statistics and table view');
-  console.log('  npm run view -- --tree          # Show tree view');
+  console.log('  npm run view -- --format tree   # Show tree view');
+  console.log('  npm run view -- --tree          # Same as --format tree');
+  console.log('  npm run view -- --stats         # Show statistics only');
   console.log('  npm run view -- -l 50           # Limit to 50 facts');
-  console.log('  npm run view -- --tree --limit 20');
+  console.log('  npm run view -- --format tree --limit 20');
   console.log();
   console.log(colors.dim + 'Database path: ' + DB_PATH + colors.reset);
 }
@@ -285,8 +289,12 @@ function showHelp() {
 function main() {
   const args = process.argv.slice(2);
   
-  const showTree = args.includes('--tree') || args.includes('-t');
+  const formatIndex = args.findIndex(arg => arg === '--format');
+  const formatArg = formatIndex !== -1 ? (args[formatIndex + 1] || '').toLowerCase() : 'table';
+  const showTree = args.includes('--tree') || args.includes('-t') || formatArg === 'tree';
+  const showStatsOnly = args.includes('--stats');
   const showHelpFlag = args.includes('--help') || args.includes('-h');
+  const hasInvalidFormat = formatIndex !== -1 && !['table', 'tree'].includes(formatArg);
   
   let limit = 100;
   const limitIndex = args.findIndex(arg => arg === '--limit' || arg === '-l');
@@ -294,9 +302,13 @@ function main() {
     limit = parseInt(args[limitIndex + 1], 10) || 100;
   }
   
-  if (showHelpFlag) {
+  if (showHelpFlag || hasInvalidFormat) {
+    if (hasInvalidFormat) {
+      console.error(colors.fg.red + `Invalid format: ${formatArg}` + colors.reset);
+      console.log();
+    }
     showHelp();
-    process.exit(0);
+    process.exit(hasInvalidFormat ? 1 : 0);
   }
   
   printHeader('🧠 Memorix Database Viewer');
@@ -309,12 +321,14 @@ function main() {
     const stats = getStatistics(db);
     displayStatistics(stats);
     
-    if (showTree) {
-      const groupedFacts = getFactsBySubject(db);
-      displayTreeView(groupedFacts);
-    } else {
-      const facts = getActiveFacts(db, limit);
-      displayFactsTable(facts);
+    if (!showStatsOnly) {
+      if (showTree) {
+        const groupedFacts = getFactsBySubject(db);
+        displayTreeView(groupedFacts);
+      } else {
+        const facts = getActiveFacts(db, limit);
+        displayFactsTable(facts);
+      }
     }
     
     printHeader('✓ View Complete');

@@ -99,6 +99,97 @@ const MIGRATIONS = [
       db.exec(`CREATE INDEX IF NOT EXISTS idx_facts_subject ON facts(subject)`);
       db.exec(`CREATE INDEX IF NOT EXISTS idx_facts_predicate ON facts(predicate)`);
     }
+  },
+  // Version 2: Predicate policy registry for mutable fact semantics
+  {
+    version: 2,
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS predicate_policies (
+          predicate TEXT PRIMARY KEY,
+          mode TEXT NOT NULL CHECK (mode IN ('single', 'multi')),
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_predicate_policies_mode
+        ON predicate_policies(mode)
+      `);
+    }
+  },
+  // Version 3: Compaction telemetry for auto-tuning
+  {
+    version: 3,
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS compaction_events (
+          id TEXT PRIMARY KEY,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          input_fact_count INTEGER NOT NULL DEFAULT 0,
+          output_line_count INTEGER NOT NULL DEFAULT 0,
+          output_char_count INTEGER NOT NULL DEFAULT 0,
+          token_budget INTEGER,
+          before_token_estimate INTEGER NOT NULL DEFAULT 0,
+          after_token_estimate INTEGER NOT NULL DEFAULT 0,
+          compression_ratio REAL NOT NULL DEFAULT 1.0,
+          avg_quality_score REAL NOT NULL DEFAULT 0.0,
+          prioritize_contradictions INTEGER NOT NULL DEFAULT 0
+        )
+      `);
+
+      db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_compaction_events_created_at
+        ON compaction_events(created_at DESC)
+      `);
+    }
+  },
+  // Version 4: Contradiction resolution audit trail and rollback support
+  {
+    version: 4,
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS contradiction_resolutions (
+          id TEXT PRIMARY KEY,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          subject TEXT NOT NULL,
+          predicate TEXT NOT NULL,
+          strategy TEXT NOT NULL,
+          kept_fact_id TEXT NOT NULL,
+          invalidated_fact_ids TEXT NOT NULL,
+          reason TEXT,
+          rolled_back_at DATETIME DEFAULT NULL
+        )
+      `);
+
+      db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_contradiction_resolutions_subject_predicate
+        ON contradiction_resolutions(subject, predicate, created_at DESC)
+      `);
+    }
+  },
+  // Version 5: Governance run state machine for idempotency and recovery
+  {
+    version: 5,
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS governance_runs (
+          id TEXT PRIMARY KEY,
+          idempotency_key TEXT UNIQUE,
+          status TEXT NOT NULL CHECK (status IN ('running', 'completed', 'failed')),
+          input_payload TEXT,
+          output_payload TEXT,
+          error_message TEXT,
+          started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          completed_at DATETIME DEFAULT NULL
+        )
+      `);
+
+      db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_governance_runs_status_started
+        ON governance_runs(status, started_at DESC)
+      `);
+    }
   }
 ];
 

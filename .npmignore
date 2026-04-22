@@ -1,0 +1,21 @@
+# Development artifacts
+node_modules/
+.DS_Store
+*.log
+*.tgz
+
+# Local databases and runtime state
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Source-only assets not required in npm tarball
+test/
+docs/
+tools/
+inject_xsearch.js
+
+# VCS / editor
+.git/
+.github/

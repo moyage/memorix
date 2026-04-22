@@ -80,8 +80,11 @@ npm run view -- --format table
 # View as tree structure
 npm run view -- --format tree
 
-# View statistics
+# View statistics only
 npm run view -- --stats
+
+# Backward-compatible alias for tree mode
+npm run view -- --tree
 ```
 
 ## Configuration
@@ -135,6 +138,23 @@ When integrated as an MCP server, Memorix provides the following tools:
 | `memorix_query_history` | Query historical state at a specific time |
 | `memorix_trace_relations` | Graph traversal up to 3 hops |
 | `memorix_auto_memorize` | Auto-extract triples from unstructured text |
+| `memorix_get_context_pack` | Build compact, high-signal memory packs for long sessions |
+| `memorix_import_markdown` | Import OpenClaw-style markdown memory into Memorix |
+| `memorix_export_markdown` | Export active memory to markdown for OpenClaw workflows |
+| `memorix_get_predicate_policies` | Inspect effective single/multi predicate policies |
+| `memorix_set_predicate_policy` | Set mutable predicate policy (`single`/`multi`) |
+| `memorix_detect_contradictions` | Detect active contradictions for single-value predicates |
+| `memorix_resolve_contradiction` | Resolve contradictions by keeping one active fact |
+| `memorix_rollback_resolution` | Roll back a prior contradiction resolution |
+| `memorix_rank_promotion_candidates` | Rank deterministic promotion candidates for durable memory |
+| `memorix_get_health_report` | Return memory health metrics for long-running sessions |
+| `memorix_run_maintenance_sweep` | Run contradiction maintenance with dry-run/apply modes |
+| `memorix_recommend_compaction` | Recommend when to proactively run context compaction |
+| `memorix_compact_context_now` | One-shot recommend→compact→telemetry context compaction pipeline |
+| `memorix_autotune_compaction_params` | Auto-tune compaction defaults from telemetry history |
+| `memorix_run_governance_cycle` | Run combined compaction + maintenance governance cycle |
+| `memorix_check_consistency` | Verify post-operation memory consistency and repair hints |
+| `memorix_get_governance_run` | Inspect governance run status/results by run id or idempotency key |
 
 See [SKILL.md](./SKILL.md) for complete AI integration documentation.
 
@@ -147,6 +167,8 @@ memorix/
 │   └── schema.js          # Database schema & migrations
 ├── scripts/
 │   └── view-db.js         # CLI database viewer
+├── docs/
+│   └── REDESIGN_AND_MARKET_COMPARISON.md
 ├── dist/                  # Built output
 ├── build.js               # Esbuild configuration
 ├── package.json
@@ -167,8 +189,21 @@ This bundles the source code using esbuild for distribution.
 
 - **Semantic Temporal Triples**: Forces structured fact storage, reducing retrieval hallucination
 - **Auto-Memorize**: NLP-based extraction from unstructured text
+- **Context Pack**: Compresses active memory into compact, reinjectable context lines
 - **Time-Aware**: Historical queries and audit trails via temporal validity
 - **Graph Traversal**: Follow relationships up to 3 hops using recursive CTEs
+- **Deduplicated Writes**: Avoids active duplicate triples and supports optional replacement mode
+- **Predicate Policy Registry**: Mutable predicates can use latest-truth replacement semantics
+- **Quality Scoring**: Retrieval outputs include quality scores for ranking and selection
+- **Markdown Interop**: Import/export pipelines for OpenClaw memory file workflows
+- **Contradiction Operations**: Built-in detect/resolve tools for single-value predicate conflicts
+- **Promotion Pipeline Primitive**: Candidate ranking for durable-memory promotion workflows
+- **Operations Health + Sweep**: Built-in health metrics and maintenance sweep for long-term stability
+- **Proactive Compaction Advice**: Recommendation endpoint for context-pressure-triggered compaction
+- **Closed-Loop Compaction**: One-shot compaction pipeline plus telemetry-based auto-tuning
+- **Governance Cycle**: Unified dry-run/apply job for compaction and contradiction maintenance
+- **Automatic Strategy Selection**: No user-facing strategy tiers; maintenance policy is inferred automatically
+- **Consistency Checks**: Built-in verification pass for post-repair and post-rollback integrity
 - **Safe Migrations**: Non-destructive schema upgrades
 - **Visual Observability**: CLI tool for human review of memory states
 
