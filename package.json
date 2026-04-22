@@ -10,7 +10,11 @@
     "start": "node dist/server.js",
     "dev": "node src/server.js",
     "view": "node scripts/view-db.js",
-    "test": "node --test"
+    "test": "node --test",
+    "clawhub:preflight": "bash ./scripts/clawhub_preflight.sh",
+    "clawhub:security": "bash ./scripts/clawhub_run_security_cases.sh",
+    "clawhub:verify": "npm run clawhub:preflight && npm run clawhub:security",
+    "clawhub:publish": "bash ./scripts/clawhub_publish_safe.sh"
   },
   "keywords": [
     "mcp",

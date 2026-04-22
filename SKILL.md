@@ -1,3 +1,8 @@
+---
+name: memorix
+description: Use when long-running agent sessions risk context explosion, memory drift, or unreliable recall, and durable searchable memory with automatic compaction/governance is needed.
+---
+
 # Memorix Skill Specification
 
 ## Overview

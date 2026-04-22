@@ -1,0 +1,19 @@
+{
+  "slug": "memorix",
+  "name": "Memorix",
+  "positioning": "Long-session context compaction and durable memory governance for OpenClaw-class agents",
+  "short_description": "Adaptive compaction + persistent memory + contradiction governance for long-running agents.",
+  "tags": [
+    "memory",
+    "context-compaction",
+    "openclaw",
+    "mcp",
+    "long-session",
+    "governance",
+    "sqlite",
+    "fts5",
+    "agent-reliability"
+  ],
+  "category_primary": "Memory",
+  "category_secondary": "Productivity"
+}

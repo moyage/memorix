@@ -185,6 +185,27 @@ npm run build
 
 This bundles the source code using esbuild for distribution.
 
+## ClawHub Release Workflow
+
+Use the built-in scripts to run a safety-gated ClawHub release flow:
+
+```bash
+# Preflight + security + build/test verification
+npm run clawhub:verify
+
+# Publish (requires clawhub CLI login)
+npm run clawhub:publish
+```
+
+Optional environment variables for publish:
+
+- `CLAWHUB_SLUG` (default: `memorix`)
+- `CLAWHUB_NAME` (default: `Memorix`)
+- `CLAWHUB_VERSION` (default: package version)
+- `CLAWHUB_CHANGELOG`
+- `CLAWHUB_TAGS` (comma-separated)
+- `CLAWHUB_DRY_RUN=1` (print command without publishing)
+
 ## Features
 
 - **Semantic Temporal Triples**: Forces structured fact storage, reducing retrieval hallucination

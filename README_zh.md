@@ -194,6 +194,27 @@ memorix/
 - **无损迁移 (Safe Migrations)**: 数据库结构升级不破坏现有事实记录。
 - **可视化可观测性**: 配备了 CLI 工具方便人类随时审查智能体的“记忆库”。
 
+## ClawHub 发布流程
+
+项目内置了带安全闸门的 ClawHub 发布脚本：
+
+```bash
+# 预检 + 安全用例 + build/test 验证
+npm run clawhub:verify
+
+# 发布（需要先登录 clawhub CLI）
+npm run clawhub:publish
+```
+
+可选环境变量：
+
+- `CLAWHUB_SLUG`（默认 `memorix`）
+- `CLAWHUB_NAME`（默认 `Memorix`）
+- `CLAWHUB_VERSION`（默认读取 package 版本）
+- `CLAWHUB_CHANGELOG`
+- `CLAWHUB_TAGS`（逗号分隔）
+- `CLAWHUB_DRY_RUN=1`（仅打印命令，不真正发布）
+
 ## 性能
 
 - WAL 模式支持写入时的高并发读取。
