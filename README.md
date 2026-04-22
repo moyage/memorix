@@ -206,6 +206,18 @@ Optional environment variables for publish:
 - `CLAWHUB_TAGS` (comma-separated)
 - `CLAWHUB_DRY_RUN=1` (print command without publishing)
 
+## SkillsMP Listing Workflow
+
+SkillsMP indexes public GitHub skill repositories automatically, so the key is to keep repository metadata and skill files high quality.
+
+```bash
+# Validate listing readiness
+npm run skillsmp:readiness
+
+# Probe SkillsMP index (query + owner/repo check)
+npm run skillsmp:probe -- memorix moyage/memorix
+```
+
 ## Features
 
 - **Semantic Temporal Triples**: Forces structured fact storage, reducing retrieval hallucination

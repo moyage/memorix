@@ -215,6 +215,18 @@ npm run clawhub:publish
 - `CLAWHUB_TAGS`（逗号分隔）
 - `CLAWHUB_DRY_RUN=1`（仅打印命令，不真正发布）
 
+## SkillsMP 上架流程
+
+SkillsMP 主要通过公开 GitHub 仓库自动抓取 Skill，因此核心工作是保证仓库元数据与 Skill 文档质量。
+
+```bash
+# 上架准备度检查
+npm run skillsmp:readiness
+
+# 探测 SkillsMP 收录状态（关键词 + owner/repo）
+npm run skillsmp:probe -- memorix moyage/memorix
+```
+
 ## 性能
 
 - WAL 模式支持写入时的高并发读取。

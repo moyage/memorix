@@ -14,9 +14,16 @@
     "clawhub:preflight": "bash ./scripts/clawhub_preflight.sh",
     "clawhub:security": "bash ./scripts/clawhub_run_security_cases.sh",
     "clawhub:verify": "npm run clawhub:preflight && npm run clawhub:security",
-    "clawhub:publish": "bash ./scripts/clawhub_publish_safe.sh"
+    "clawhub:publish": "bash ./scripts/clawhub_publish_safe.sh",
+    "skillsmp:readiness": "bash ./scripts/skillsmp_readiness.sh",
+    "skillsmp:probe": "bash ./scripts/skillsmp_probe.sh"
   },
   "keywords": [
+    "openclaw",
+    "context-compaction",
+    "long-session",
+    "agent-memory",
+    "governance",
     "mcp",
     "memory",
     "fts5",
@@ -26,7 +33,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "https://github.com/moyage/memorix.git"
   },
   "engines": {
     "node": ">=18.0.0"
