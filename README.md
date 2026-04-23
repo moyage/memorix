@@ -247,10 +247,16 @@ npm run openclaw:mcp-set -- /ABS/PATH/TO/openclaw-workspace memorix
 
 # 4) Emit OMOC/Hermes tool allowlists
 npm run openclaw:allowlists
+
+# 5) (Optional) Manage multi-sub-agent fleet
+npm run openclaw:fleet -- add agent-a /ABS/PATH/TO/agent-a-workspace omoc
+npm run openclaw:fleet -- add agent-b /ABS/PATH/TO/agent-b-workspace hermes
+npm run openclaw:fleet -- list
 ```
 
 Detailed guide: [docs/OPENCLAW_LOCAL_INTEGRATION_ZH.md](./docs/OPENCLAW_LOCAL_INTEGRATION_ZH.md)
 Standard package spec: [docs/OPENCLAW_STANDARD_SKILL_PACKAGE_SPEC_ZH.md](./docs/OPENCLAW_STANDARD_SKILL_PACKAGE_SPEC_ZH.md)
+Sub-agent fleet guide: [docs/OPENCLAW_SUBAGENT_FLEET_ZH.md](./docs/OPENCLAW_SUBAGENT_FLEET_ZH.md)
 
 ## Upgrade Safety Workflow
 

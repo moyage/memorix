@@ -256,10 +256,16 @@ npm run openclaw:mcp-set -- /ABS/PATH/TO/openclaw-workspace memorix
 
 # 4) 生成 OMOC/Hermes 的工具白名单
 npm run openclaw:allowlists
+
+# 5) （可选）多 sub-agent fleet 管理
+npm run openclaw:fleet -- add agent-a /ABS/PATH/TO/agent-a-workspace omoc
+npm run openclaw:fleet -- add agent-b /ABS/PATH/TO/agent-b-workspace hermes
+npm run openclaw:fleet -- list
 ```
 
 完整步骤见：[docs/OPENCLAW_LOCAL_INTEGRATION_ZH.md](./docs/OPENCLAW_LOCAL_INTEGRATION_ZH.md)
 标准目录规范见：[docs/OPENCLAW_STANDARD_SKILL_PACKAGE_SPEC_ZH.md](./docs/OPENCLAW_STANDARD_SKILL_PACKAGE_SPEC_ZH.md)
+多 sub-agent 管理见：[docs/OPENCLAW_SUBAGENT_FLEET_ZH.md](./docs/OPENCLAW_SUBAGENT_FLEET_ZH.md)
 
 ## 老用户升级保障（推荐）
 

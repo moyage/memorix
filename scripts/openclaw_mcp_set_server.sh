@@ -4,9 +4,10 @@ set -euo pipefail
 WORKSPACE_DIR="${1:-}"
 SKILL_NAME="${2:-memorix}"
 DB_PATH_OVERRIDE="${3:-}"
+SERVER_NAME="${4:-$SKILL_NAME}"
 
 if [[ -z "$WORKSPACE_DIR" ]]; then
-  echo "Usage: $0 <openclaw-workspace-path> [skill-name] [db-path-override]"
+  echo "Usage: $0 <openclaw-workspace-path> [skill-name] [db-path-override] [server-name]"
   exit 1
 fi
 
@@ -24,8 +25,8 @@ VALUE_JSON="$(cat <<JSON
 JSON
 )"
 
-echo "[INFO] Setting MCP server via OpenClaw CLI: $SKILL_NAME"
-openclaw mcp set "$SKILL_NAME" "$VALUE_JSON"
+echo "[INFO] Setting MCP server via OpenClaw CLI: $SERVER_NAME"
+openclaw mcp set "$SERVER_NAME" "$VALUE_JSON"
 
-echo "[OK] MCP server configured: $SKILL_NAME"
-openclaw mcp show "$SKILL_NAME" || true
+echo "[OK] MCP server configured: $SERVER_NAME"
+openclaw mcp show "$SERVER_NAME" || true

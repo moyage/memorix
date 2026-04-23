@@ -22,6 +22,7 @@
     "openclaw:mcp-snippet": "bash ./scripts/openclaw_emit_mcp_snippet.sh",
     "openclaw:mcp-set": "bash ./scripts/openclaw_mcp_set_server.sh",
     "openclaw:allowlists": "bash ./scripts/openclaw_emit_allowlists.sh",
+    "openclaw:fleet": "bash ./scripts/openclaw_fleet_controller.sh",
     "upgrade:preflight": "bash ./scripts/upgrade/preflight.sh",
     "upgrade:doctor": "bash ./scripts/upgrade/doctor.sh",
     "upgrade:backup": "bash ./scripts/upgrade/backup.sh",
