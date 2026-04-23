@@ -251,7 +251,10 @@ npm run openclaw:install -- /ABS/PATH/TO/openclaw-workspace memorix
 # 2) 生成可手工粘贴的 mcp.servers 片段（指向 workspace 内 skill 实体）
 npm run openclaw:mcp-snippet -- /ABS/PATH/TO/openclaw-workspace memorix
 
-# 3) 生成 OMOC/Hermes 的工具白名单
+# 3) 优先尝试用 OpenClaw CLI 直接接线 MCP（若策略允许）
+npm run openclaw:mcp-set -- /ABS/PATH/TO/openclaw-workspace memorix
+
+# 4) 生成 OMOC/Hermes 的工具白名单
 npm run openclaw:allowlists
 ```
 

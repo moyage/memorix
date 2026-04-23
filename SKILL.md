@@ -5,8 +5,6 @@ version: 2.1.0
 metadata:
   openclaw:
     requires:
-      env:
-        - MEMORIX_DB_PATH
       bins:
         - node
     homepage: https://github.com/moyage/memorix

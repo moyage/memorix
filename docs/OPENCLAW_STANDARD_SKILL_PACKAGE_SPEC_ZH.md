@@ -45,6 +45,8 @@ memorix/
 - `metadata.openclaw.requires.bins`
 - `metadata.openclaw.homepage`
 
+说明：`MEMORIX_DB_PATH` 当前为可选运行时变量，不再作为硬性 skill requirement。
+
 ## 安装与物化流程（本仓库）
 
 1. 物化标准 skill 包：
@@ -72,6 +74,12 @@ npm run openclaw:install -- /ABS/PATH/TO/workspace memorix
 ```
 
 3. 若 `mcp.servers` 是 protected path，先输出片段后手工粘贴：
+
+```bash
+npm run openclaw:mcp-set -- /ABS/PATH/TO/workspace memorix
+```
+
+如 CLI 接线被策略拦截，再回退：
 
 ```bash
 npm run openclaw:mcp-snippet -- /ABS/PATH/TO/workspace memorix

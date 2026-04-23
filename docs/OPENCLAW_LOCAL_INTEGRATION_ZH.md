@@ -24,7 +24,13 @@ npm run openclaw:materialize
 npm run openclaw:install -- /ABS/PATH/TO/your-openclaw-workspace memorix
 ```
 
-## 2) 生成 MCP servers 配置片段（手工粘贴）
+## 2) 优先使用 OpenClaw CLI 接线 MCP server
+
+```bash
+npm run openclaw:mcp-set -- /ABS/PATH/TO/your-openclaw-workspace memorix
+```
+
+## 3) 生成 MCP servers 配置片段（用于手工粘贴回退）
 
 > 注：若 `mcp.servers` 是 protected path，需手工在允许入口粘贴。
 
@@ -38,7 +44,7 @@ npm run openclaw:mcp-snippet -- /ABS/PATH/TO/your-openclaw-workspace memorix
 npm run openclaw:mcp-snippet -- /ABS/PATH/TO/your-openclaw-workspace memorix /ABS/PATH/TO/memorix.db
 ```
 
-## 3) 生成 Agent 工具白名单（OMOC/Hermes）
+## 4) 生成 Agent 工具白名单（OMOC/Hermes）
 
 ```bash
 npm run openclaw:allowlists

@@ -242,7 +242,10 @@ npm run openclaw:install -- /ABS/PATH/TO/openclaw-workspace memorix
 # 2) Emit manual mcp.servers snippet (points to workspace skill entity path)
 npm run openclaw:mcp-snippet -- /ABS/PATH/TO/openclaw-workspace memorix
 
-# 3) Emit OMOC/Hermes tool allowlists
+# 3) Prefer CLI-based MCP registration (if your OpenClaw policy allows it)
+npm run openclaw:mcp-set -- /ABS/PATH/TO/openclaw-workspace memorix
+
+# 4) Emit OMOC/Hermes tool allowlists
 npm run openclaw:allowlists
 ```
 
