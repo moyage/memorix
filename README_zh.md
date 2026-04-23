@@ -88,7 +88,11 @@ npm run view -- --tree
 | 变量名 | 默认值 | 描述 |
 |----------|---------|-------------|
 | `MEMORIX_DB_PATH` | `./memorix.db` | SQLite 数据库文件存放路径 |
-| `MEMORIX_TOOL_PROFILE` | `full` | 工具暴露档位：`full`、`omoc`（执行写入）或 `hermes`（审查治理） |
+| `MEMORIX_TOOL_PROFILE` | `full` | 工具暴露档位：`full`、`omoc`、`hermes` 或 `auto`（自动匹配） |
+| `MEMORIX_AUTO_PROFILE_WINDOW` | `6` | 自动识别使用的滑动窗口调用数 |
+| `MEMORIX_AUTO_PROFILE_MIN_CALLS` | `3` | 自动锁定 profile 前最少观测调用数 |
+| `MEMORIX_AGENT_ID/NAME/ROLE` | _(未设置)_ | 可选 Agent 身份提示，用于启动即匹配 profile |
+| `MEMORIX_CLIENT_NAME/TITLE` | _(未设置)_ | 可选客户端提示，用于启动即匹配 profile |
 | `MEMORIX_ALLOWED_TOOLS` | _(未设置)_ | 显式逗号分隔工具白名单（覆盖 profile） |
 | `MEMORIX_PREDICATE_ALIASES` | 内置同义映射 | 额外同义词映射，格式：`likes:prefers,works for:works_at` |
 | `MEMORIX_PREDICATE_WHITELIST` | _(未设置)_ | 允许写入的谓词白名单（逗号分隔） |

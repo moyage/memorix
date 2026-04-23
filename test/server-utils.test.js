@@ -14,6 +14,8 @@ import {
   normalizePredicateName,
   normalizePredicateToken,
   getAllowedToolsForProfile,
+  inferProfileFromAgentIdentity,
+  inferProfileFromToolUsage,
   normalizeIdempotencyKey,
   normalizeLimit,
   parseCompactionCursor,
@@ -198,6 +200,30 @@ test('getAllowedToolsForProfile honors explicit allowlist', () => {
   } else {
     process.env.MEMORIX_ALLOWED_TOOLS = original;
   }
+});
+
+test('inferProfileFromAgentIdentity detects hermes and omoc hints', () => {
+  assert.equal(inferProfileFromAgentIdentity({ agent_name: 'Hermes-Auditor' }), 'hermes');
+  assert.equal(inferProfileFromAgentIdentity({ agent_role: 'execution_writer' }), 'omoc');
+  assert.equal(inferProfileFromAgentIdentity({ client_name: 'generic-client' }), null);
+});
+
+test('inferProfileFromToolUsage returns confidence-scored profile', () => {
+  const hermes = inferProfileFromToolUsage([
+    'memorix_get_health_report',
+    'memorix_run_governance_cycle',
+    'memorix_detect_contradictions'
+  ]);
+  assert.equal(hermes.profile, 'hermes');
+  assert.equal(hermes.confidence > 0.7, true);
+
+  const omoc = inferProfileFromToolUsage([
+    'memorix_store_fact',
+    'memorix_store_facts',
+    'memorix_auto_memorize'
+  ]);
+  assert.equal(omoc.profile, 'omoc');
+  assert.equal(omoc.confidence > 0.7, true);
 });
 
 test('scoreActiveFact returns normalized score', () => {

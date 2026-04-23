@@ -43,6 +43,8 @@ const DEFAULT_PREDICATE_ALIASES = new Map([
   ['live_in', 'lives_in']
 ]);
 const TOOL_PROFILE = (process.env.MEMORIX_TOOL_PROFILE || 'full').trim().toLowerCase();
+const AUTO_PROFILE_WINDOW = Math.max(3, Number.parseInt(process.env.MEMORIX_AUTO_PROFILE_WINDOW || '6', 10) || 6);
+const AUTO_PROFILE_MIN_CALLS = Math.max(2, Number.parseInt(process.env.MEMORIX_AUTO_PROFILE_MIN_CALLS || '3', 10) || 3);
 const PREDICATE_WHITELIST_MODE = (process.env.MEMORIX_PREDICATE_WHITELIST_MODE || 'warn').trim().toLowerCase();
 const PREDICATE_WHITELIST = new Set(
   (process.env.MEMORIX_PREDICATE_WHITELIST || '')
@@ -76,6 +78,40 @@ const DEFAULT_SINGLE_VALUE_PREDICATES = new Set(
 const require = createRequire(import.meta.url);
 let tokenizerInitAttempted = false;
 let tokenizerEncodingForModel = null;
+const WRITER_TOOL_NAMES = new Set([
+  'memorix_store_fact',
+  'memorix_store_facts',
+  'memorix_search_fts',
+  'memorix_invalidate_fact',
+  'memorix_query_history',
+  'memorix_trace_relations',
+  'memorix_auto_memorize',
+  'memorix_get_context_pack',
+  'memorix_import_markdown',
+  'memorix_export_markdown',
+  'memorix_get_predicate_policies'
+]);
+const REVIEWER_TOOL_NAMES = new Set([
+  'memorix_search_fts',
+  'memorix_query_history',
+  'memorix_trace_relations',
+  'memorix_get_context_pack',
+  'memorix_export_markdown',
+  'memorix_get_predicate_policies',
+  'memorix_set_predicate_policy',
+  'memorix_detect_contradictions',
+  'memorix_resolve_contradiction',
+  'memorix_rollback_resolution',
+  'memorix_rank_promotion_candidates',
+  'memorix_get_health_report',
+  'memorix_run_maintenance_sweep',
+  'memorix_recommend_compaction',
+  'memorix_compact_context_now',
+  'memorix_autotune_compaction_params',
+  'memorix_run_governance_cycle',
+  'memorix_get_governance_run',
+  'memorix_check_consistency'
+]);
 
 function validateString(value, fieldName, maxLen = MAX_FIELD_LENGTH) {
   if (typeof value !== 'string') {
@@ -183,42 +219,9 @@ function normalizeOptionalPredicateName(value, fieldName = 'predicate', options 
   return normalizePredicateName(value, fieldName, options);
 }
 
-function getAllowedToolsForProfile(allTools) {
+function getAllowedToolsForProfile(allTools, options = {}) {
   const all = new Set(allTools.map((tool) => tool.name));
-  const writer = new Set([
-    'memorix_store_fact',
-    'memorix_store_facts',
-    'memorix_search_fts',
-    'memorix_invalidate_fact',
-    'memorix_query_history',
-    'memorix_trace_relations',
-    'memorix_auto_memorize',
-    'memorix_get_context_pack',
-    'memorix_import_markdown',
-    'memorix_export_markdown',
-    'memorix_get_predicate_policies'
-  ]);
-  const reviewer = new Set([
-    'memorix_search_fts',
-    'memorix_query_history',
-    'memorix_trace_relations',
-    'memorix_get_context_pack',
-    'memorix_export_markdown',
-    'memorix_get_predicate_policies',
-    'memorix_set_predicate_policy',
-    'memorix_detect_contradictions',
-    'memorix_resolve_contradiction',
-    'memorix_rollback_resolution',
-    'memorix_rank_promotion_candidates',
-    'memorix_get_health_report',
-    'memorix_run_maintenance_sweep',
-    'memorix_recommend_compaction',
-    'memorix_compact_context_now',
-    'memorix_autotune_compaction_params',
-    'memorix_run_governance_cycle',
-    'memorix_get_governance_run',
-    'memorix_check_consistency'
-  ]);
+  const selectedProfile = String(options.profile || TOOL_PROFILE).toLowerCase();
 
   if (process.env.MEMORIX_ALLOWED_TOOLS) {
     const explicit = new Set(
@@ -230,13 +233,65 @@ function getAllowedToolsForProfile(allTools) {
     return new Set([...explicit].filter((name) => all.has(name)));
   }
 
-  if (['omoc', 'writer', 'execution'].includes(TOOL_PROFILE)) {
-    return new Set([...writer].filter((name) => all.has(name)));
+  if (['omoc', 'writer', 'execution'].includes(selectedProfile)) {
+    return new Set([...WRITER_TOOL_NAMES].filter((name) => all.has(name)));
   }
-  if (['hermes', 'reviewer', 'audit'].includes(TOOL_PROFILE)) {
-    return new Set([...reviewer].filter((name) => all.has(name)));
+  if (['hermes', 'reviewer', 'audit'].includes(selectedProfile)) {
+    return new Set([...REVIEWER_TOOL_NAMES].filter((name) => all.has(name)));
   }
   return all;
+}
+
+function inferProfileFromAgentIdentity(identity = {}) {
+  const fields = [
+    identity.agent_id,
+    identity.agent_name,
+    identity.agent_role,
+    identity.client_name,
+    identity.client_title
+  ]
+    .filter(Boolean)
+    .map((v) => String(v).toLowerCase())
+    .join(' ');
+
+  if (!fields) {
+    return null;
+  }
+  if (/(hermes|review|auditor|audit|governance|consisten)/.test(fields)) {
+    return 'hermes';
+  }
+  if (/(omoc|executor|execution|writer|builder|coding|coder)/.test(fields)) {
+    return 'omoc';
+  }
+  return null;
+}
+
+function inferProfileFromToolUsage(calls = []) {
+  if (!Array.isArray(calls) || calls.length === 0) {
+    return { profile: null, confidence: 0 };
+  }
+  let writer = 0;
+  let reviewer = 0;
+  for (const name of calls) {
+    if (WRITER_TOOL_NAMES.has(name)) {
+      writer += 1;
+    }
+    if (REVIEWER_TOOL_NAMES.has(name)) {
+      reviewer += 1;
+    }
+  }
+
+  const total = writer + reviewer;
+  if (total < AUTO_PROFILE_MIN_CALLS) {
+    return { profile: null, confidence: 0 };
+  }
+  if (reviewer > writer) {
+    return { profile: 'hermes', confidence: Number((reviewer / total).toFixed(3)) };
+  }
+  if (writer > reviewer) {
+    return { profile: 'omoc', confidence: Number((writer / total).toFixed(3)) };
+  }
+  return { profile: null, confidence: 0.5 };
 }
 
 function buildContextPack(records, perSubjectLimit = 4) {
@@ -1176,7 +1231,27 @@ function createServer() {
     consistencyCheckTool,
     governanceRunStatusTool
   ];
-  const allowedTools = getAllowedToolsForProfile(allTools);
+  const autoProfileEnabled = ['auto', 'smart', 'adaptive'].includes(TOOL_PROFILE);
+  const identityProfile = inferProfileFromAgentIdentity({
+    agent_id: process.env.MEMORIX_AGENT_ID,
+    agent_name: process.env.MEMORIX_AGENT_NAME,
+    agent_role: process.env.MEMORIX_AGENT_ROLE,
+    client_name: process.env.MEMORIX_CLIENT_NAME,
+    client_title: process.env.MEMORIX_CLIENT_TITLE
+  });
+  let activeProfile = autoProfileEnabled ? (identityProfile || 'omoc') : TOOL_PROFILE;
+  let profileLocked = !autoProfileEnabled || Boolean(identityProfile);
+  const recentToolCalls = [];
+  let allowedTools = getAllowedToolsForProfile(allTools, { profile: activeProfile });
+
+  function switchProfile(nextProfile, reason) {
+    if (!nextProfile || nextProfile === activeProfile) {
+      return;
+    }
+    activeProfile = nextProfile;
+    allowedTools = getAllowedToolsForProfile(allTools, { profile: activeProfile });
+    console.log(`[Memorix] auto profile switched to "${activeProfile}" (${reason})`);
+  }
 
   server.setRequestHandler('tools/list', async () => {
     return {
@@ -1644,8 +1719,38 @@ function createServer() {
 
   server.setRequestHandler('tools/call', async ({ name, arguments: args }) => {
     try {
+    if (autoProfileEnabled && !profileLocked) {
+      recentToolCalls.push(name);
+      while (recentToolCalls.length > AUTO_PROFILE_WINDOW) {
+        recentToolCalls.shift();
+      }
+      if (REVIEWER_TOOL_NAMES.has(name) && !WRITER_TOOL_NAMES.has(name)) {
+        switchProfile('hermes', `governance-call:${name}`);
+        profileLocked = true;
+      } else {
+        const inferred = inferProfileFromToolUsage(recentToolCalls);
+        if (inferred.profile && inferred.confidence >= 0.7) {
+          switchProfile(inferred.profile, `usage-confidence:${inferred.confidence}`);
+          if (recentToolCalls.length >= AUTO_PROFILE_MIN_CALLS && inferred.confidence >= 0.8) {
+            profileLocked = true;
+          }
+        }
+      }
+    }
+
     if (!allowedTools.has(name)) {
-      throw new Error(`Tool "${name}" is not enabled for profile "${TOOL_PROFILE}"`);
+      if (autoProfileEnabled && activeProfile === 'omoc' && REVIEWER_TOOL_NAMES.has(name)) {
+        switchProfile('hermes', `escalate-on-demand:${name}`);
+        profileLocked = true;
+      } else if (autoProfileEnabled && activeProfile === 'hermes' && WRITER_TOOL_NAMES.has(name) && !REVIEWER_TOOL_NAMES.has(name)) {
+        switchProfile('omoc', `deescalate-on-demand:${name}`);
+      } else {
+        throw new Error(`Tool "${name}" is not enabled for profile "${activeProfile}"`);
+      }
+    }
+
+    if (!allowedTools.has(name)) {
+      throw new Error(`Tool "${name}" is not enabled for profile "${activeProfile}"`);
     }
     if (name === 'memorix_store_fact') {
       const result = storeFactWithPolicy(args);
@@ -2773,6 +2878,8 @@ export {
   scoreActiveFact,
   scorePromotionCandidate,
   getAllowedToolsForProfile,
+  inferProfileFromAgentIdentity,
+  inferProfileFromToolUsage,
   summarizePackQuality,
   validateString
 };

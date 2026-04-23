@@ -94,7 +94,11 @@ npm run view -- --tree
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `MEMORIX_DB_PATH` | `./memorix.db` | Path to SQLite database file |
-| `MEMORIX_TOOL_PROFILE` | `full` | Tool exposure profile: `full`, `omoc` (writer), `hermes` (reviewer) |
+| `MEMORIX_TOOL_PROFILE` | `full` | Tool exposure profile: `full`, `omoc`, `hermes`, or `auto` |
+| `MEMORIX_AUTO_PROFILE_WINDOW` | `6` | Sliding window size for auto profile inference |
+| `MEMORIX_AUTO_PROFILE_MIN_CALLS` | `3` | Minimum observed calls before auto profile lock |
+| `MEMORIX_AGENT_ID/NAME/ROLE` | _(unset)_ | Optional identity hints for immediate auto profile matching |
+| `MEMORIX_CLIENT_NAME/TITLE` | _(unset)_ | Optional client hints for immediate auto profile matching |
 | `MEMORIX_ALLOWED_TOOLS` | _(unset)_ | Explicit comma-separated allowlist override |
 | `MEMORIX_PREDICATE_ALIASES` | built-in aliases | Extra alias map, format: `likes:prefers,works for:works_at` |
 | `MEMORIX_PREDICATE_WHITELIST` | _(unset)_ | Comma-separated allowed predicates |
