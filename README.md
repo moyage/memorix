@@ -227,6 +227,23 @@ npm run skillsmp:readiness
 npm run skillsmp:probe -- memorix moyage/memorix
 ```
 
+## OpenClaw Local Integration (Protected Config Compatible)
+
+When OpenClaw blocks symlinks outside `workspace/skills` and protects `mcp.servers`, use the built-in helper scripts:
+
+```bash
+# 1) Copy install into workspace/skills (no symlink)
+npm run openclaw:install -- /ABS/PATH/TO/openclaw-workspace memorix
+
+# 2) Emit manual mcp.servers snippet for protected config paths
+npm run openclaw:mcp-snippet
+
+# 3) Emit OMOC/Hermes tool allowlists
+npm run openclaw:allowlists
+```
+
+Detailed guide: [docs/OPENCLAW_LOCAL_INTEGRATION_ZH.md](./docs/OPENCLAW_LOCAL_INTEGRATION_ZH.md)
+
 ## Features
 
 - **Semantic Temporal Triples**: Forces structured fact storage, reducing retrieval hallucination

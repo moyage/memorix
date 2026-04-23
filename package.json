@@ -16,7 +16,10 @@
     "clawhub:verify": "npm run clawhub:preflight && npm run clawhub:security",
     "clawhub:publish": "bash ./scripts/clawhub_publish_safe.sh",
     "skillsmp:readiness": "bash ./scripts/skillsmp_readiness.sh",
-    "skillsmp:probe": "bash ./scripts/skillsmp_probe.sh"
+    "skillsmp:probe": "bash ./scripts/skillsmp_probe.sh",
+    "openclaw:install": "bash ./scripts/openclaw_install_workspace_skill.sh",
+    "openclaw:mcp-snippet": "bash ./scripts/openclaw_emit_mcp_snippet.sh",
+    "openclaw:allowlists": "bash ./scripts/openclaw_emit_allowlists.sh"
   },
   "keywords": [
     "openclaw",
