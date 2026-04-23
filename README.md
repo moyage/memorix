@@ -244,6 +244,20 @@ npm run openclaw:allowlists
 
 Detailed guide: [docs/OPENCLAW_LOCAL_INTEGRATION_ZH.md](./docs/OPENCLAW_LOCAL_INTEGRATION_ZH.md)
 
+## Upgrade Safety Workflow
+
+```bash
+# 1) Preflight + backup before upgrade
+npm run upgrade:preflight
+npm run upgrade:backup
+
+# 2) Diagnose compatibility issues
+npm run upgrade:doctor
+
+# 3) Roll back to latest backup if needed
+npm run upgrade:rollback
+```
+
 ## Features
 
 - **Semantic Temporal Triples**: Forces structured fact storage, reducing retrieval hallucination

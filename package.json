@@ -19,7 +19,11 @@
     "skillsmp:probe": "bash ./scripts/skillsmp_probe.sh",
     "openclaw:install": "bash ./scripts/openclaw_install_workspace_skill.sh",
     "openclaw:mcp-snippet": "bash ./scripts/openclaw_emit_mcp_snippet.sh",
-    "openclaw:allowlists": "bash ./scripts/openclaw_emit_allowlists.sh"
+    "openclaw:allowlists": "bash ./scripts/openclaw_emit_allowlists.sh",
+    "upgrade:preflight": "bash ./scripts/upgrade/preflight.sh",
+    "upgrade:doctor": "bash ./scripts/upgrade/doctor.sh",
+    "upgrade:backup": "bash ./scripts/upgrade/backup.sh",
+    "upgrade:rollback": "bash ./scripts/upgrade/rollback.sh"
   },
   "keywords": [
     "openclaw",

@@ -253,6 +253,22 @@ npm run openclaw:allowlists
 
 完整步骤见：[docs/OPENCLAW_LOCAL_INTEGRATION_ZH.md](./docs/OPENCLAW_LOCAL_INTEGRATION_ZH.md)
 
+## 老用户升级保障（推荐）
+
+```bash
+# 1) 升级前检查 + 备份
+npm run upgrade:preflight
+npm run upgrade:backup
+
+# 2) 升级医生（检查）
+npm run upgrade:doctor
+
+# 3) 如有问题，回滚最近备份
+npm run upgrade:rollback
+```
+
+完整升级手册见：[docs/UPGRADE_PLAYBOOK_ZH.md](./docs/UPGRADE_PLAYBOOK_ZH.md)
+
 ## 性能
 
 - WAL 模式支持写入时的高并发读取。
