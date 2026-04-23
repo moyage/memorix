@@ -238,17 +238,18 @@ npm run skillsmp:probe -- memorix moyage/memorix
 
 ## OpenClaw 本地接入（兼容 protected config）
 
-当 OpenClaw 拒绝 `workspace/skills` 外 symlink，且 `mcp.servers` 受保护时，可直接用内置脚本：
+这是“工作区兼容集成流程”，**不是**完整的 `openclaw skills install <slug>` 标准闭环。  
+当前剩余阻塞是 `mcp.servers` 受保护时仍需手工粘贴。
 
 ```bash
 # 0) 物化最小标准 skill 包（实体目录）
 npm run openclaw:materialize
 
-# 1) 复制安装到 workspace/skills（非符号链接）
+# 1) 安装 materialized 包到 workspace/skills（非符号链接）
 npm run openclaw:install -- /ABS/PATH/TO/openclaw-workspace memorix
 
-# 2) 生成可手工粘贴的 mcp.servers 片段
-npm run openclaw:mcp-snippet
+# 2) 生成可手工粘贴的 mcp.servers 片段（指向 workspace 内 skill 实体）
+npm run openclaw:mcp-snippet -- /ABS/PATH/TO/openclaw-workspace memorix
 
 # 3) 生成 OMOC/Hermes 的工具白名单
 npm run openclaw:allowlists

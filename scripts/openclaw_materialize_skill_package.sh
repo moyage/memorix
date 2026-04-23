@@ -46,4 +46,5 @@ cat > "$OUT_DIR/openclaw.mcp.example.json" <<JSON
 JSON
 
 echo "[OK] OpenClaw skill package materialized: $OUT_DIR"
+echo "[NOTE] This prepares a standard skill entity directory, but does NOT bypass protected mcp.servers policy."
 echo "[NEXT] Copy this folder into <workspace>/skills/memorix (实体目录，非 symlink)"

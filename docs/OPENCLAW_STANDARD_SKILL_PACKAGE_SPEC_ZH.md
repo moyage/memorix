@@ -11,6 +11,15 @@
 
 因此，Memorix 当前应优先走 Skill 包合规，而不是强制按 Plugin 清单改造。
 
+## 当前边界（必须明确）
+
+当前迭代完成了“标准 skill 目录合规”和“实体内聚运行路径”，但尚未打通：
+
+- `openclaw skills install memorix`（ClawHub 发布闭环）
+- protected `mcp.servers` 场景下的全自动注册
+
+也就是说：当前是**标准目录 + 手工配置补位**，不是市场标准安装全自动闭环。
+
 ## 最小合规目录（用于 workspace/skills/memorix）
 
 ```text
@@ -50,16 +59,22 @@ npm run openclaw:materialize
 .release/openclaw-skill/memorix
 ```
 
-2. 复制到 OpenClaw workspace：
+2. 复制到 OpenClaw workspace（或直接用 install 脚本）：
 
 ```bash
 cp -R ./.release/openclaw-skill/memorix /ABS/PATH/TO/workspace/skills/memorix
 ```
 
+或：
+
+```bash
+npm run openclaw:install -- /ABS/PATH/TO/workspace memorix
+```
+
 3. 若 `mcp.servers` 是 protected path，先输出片段后手工粘贴：
 
 ```bash
-npm run openclaw:mcp-snippet
+npm run openclaw:mcp-snippet -- /ABS/PATH/TO/workspace memorix
 ```
 
 4. 生成 OMOC/Hermes allowlist：

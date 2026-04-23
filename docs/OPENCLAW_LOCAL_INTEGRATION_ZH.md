@@ -10,6 +10,8 @@
 2. 将 Memorix 作为 MCP server 注册到 `mcp.servers`
 3. 在 agent 路由层配置 tool allowlist（OMOC/Hermes 分流）
 
+> 注意：本流程是“工作区兼容集成方案”，不是 `openclaw skills install <slug>` 的标准市场安装闭环。
+
 ## 1) 复制安装到 workspace/skills（绕过 symlink 限制）
 
 可先物化最小标准 skill 包：
@@ -27,13 +29,13 @@ npm run openclaw:install -- /ABS/PATH/TO/your-openclaw-workspace memorix
 > 注：若 `mcp.servers` 是 protected path，需手工在允许入口粘贴。
 
 ```bash
-npm run openclaw:mcp-snippet
+npm run openclaw:mcp-snippet -- /ABS/PATH/TO/your-openclaw-workspace memorix
 ```
 
-可指定 server/db 路径：
+可额外指定 DB 路径（第三参数）：
 
 ```bash
-npm run openclaw:mcp-snippet -- /Users/mlabs/Programs/memorix/dist/server.js /Users/mlabs/Programs/memorix/memorix.db
+npm run openclaw:mcp-snippet -- /ABS/PATH/TO/your-openclaw-workspace memorix /ABS/PATH/TO/memorix.db
 ```
 
 ## 3) 生成 Agent 工具白名单（OMOC/Hermes）

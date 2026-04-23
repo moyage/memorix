@@ -229,17 +229,18 @@ npm run skillsmp:probe -- memorix moyage/memorix
 
 ## OpenClaw Local Integration (Protected Config Compatible)
 
-When OpenClaw blocks symlinks outside `workspace/skills` and protects `mcp.servers`, use the built-in helper scripts:
+This is a **workspace-compatible integration flow**, not the full standard `openclaw skills install <slug>` path.
+The remaining blocker is protected `mcp.servers` policy (manual paste still required when protected).
 
 ```bash
 # 0) Materialize a minimal standard skill folder (entity directory)
 npm run openclaw:materialize
 
-# 1) Copy install into workspace/skills (no symlink)
+# 1) Install materialized package into workspace/skills (no symlink)
 npm run openclaw:install -- /ABS/PATH/TO/openclaw-workspace memorix
 
-# 2) Emit manual mcp.servers snippet for protected config paths
-npm run openclaw:mcp-snippet
+# 2) Emit manual mcp.servers snippet (points to workspace skill entity path)
+npm run openclaw:mcp-snippet -- /ABS/PATH/TO/openclaw-workspace memorix
 
 # 3) Emit OMOC/Hermes tool allowlists
 npm run openclaw:allowlists

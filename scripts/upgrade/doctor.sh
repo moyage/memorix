@@ -18,7 +18,11 @@ echo "[INFO] Upgrade doctor mode=$MODE"
 bash ./scripts/upgrade/preflight.sh "$WORKSPACE_DIR"
 
 echo "[INFO] Recommended MCP snippet (manual paste for protected mcp.servers):"
-bash ./scripts/openclaw_emit_mcp_snippet.sh
+if [[ -n "$WORKSPACE_DIR" ]]; then
+  bash ./scripts/openclaw_emit_mcp_snippet.sh "$WORKSPACE_DIR" "$TARGET_NAME"
+else
+  bash ./scripts/openclaw_emit_mcp_snippet.sh
+fi
 
 echo "[INFO] Recommended allowlists:"
 bash ./scripts/openclaw_emit_allowlists.sh
