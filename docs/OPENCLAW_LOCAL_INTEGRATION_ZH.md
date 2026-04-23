@@ -12,6 +12,12 @@
 
 ## 1) 复制安装到 workspace/skills（绕过 symlink 限制）
 
+可先物化最小标准 skill 包：
+
+```bash
+npm run openclaw:materialize
+```
+
 ```bash
 npm run openclaw:install -- /ABS/PATH/TO/your-openclaw-workspace memorix
 ```

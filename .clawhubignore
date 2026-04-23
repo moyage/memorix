@@ -1,0 +1,9 @@
+.git/
+node_modules/
+memorix.db
+memorix.db-*
+*.tgz
+.DS_Store
+dist/*.map
+scripts/upgrade/
+.github/

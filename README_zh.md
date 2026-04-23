@@ -241,6 +241,9 @@ npm run skillsmp:probe -- memorix moyage/memorix
 当 OpenClaw 拒绝 `workspace/skills` 外 symlink，且 `mcp.servers` 受保护时，可直接用内置脚本：
 
 ```bash
+# 0) 物化最小标准 skill 包（实体目录）
+npm run openclaw:materialize
+
 # 1) 复制安装到 workspace/skills（非符号链接）
 npm run openclaw:install -- /ABS/PATH/TO/openclaw-workspace memorix
 
@@ -252,6 +255,7 @@ npm run openclaw:allowlists
 ```
 
 完整步骤见：[docs/OPENCLAW_LOCAL_INTEGRATION_ZH.md](./docs/OPENCLAW_LOCAL_INTEGRATION_ZH.md)
+标准目录规范见：[docs/OPENCLAW_STANDARD_SKILL_PACKAGE_SPEC_ZH.md](./docs/OPENCLAW_STANDARD_SKILL_PACKAGE_SPEC_ZH.md)
 
 ## 老用户升级保障（推荐）
 

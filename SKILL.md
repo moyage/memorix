@@ -1,6 +1,15 @@
 ---
 name: memorix
 description: Use when long-running agent sessions risk context explosion, memory drift, or unreliable recall, and durable searchable memory with automatic compaction/governance is needed.
+version: 2.1.0
+metadata:
+  openclaw:
+    requires:
+      env:
+        - MEMORIX_DB_PATH
+      bins:
+        - node
+    homepage: https://github.com/moyage/memorix
 ---
 
 # Memorix Skill Specification
