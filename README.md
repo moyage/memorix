@@ -94,6 +94,11 @@ npm run view -- --tree
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `MEMORIX_DB_PATH` | `./memorix.db` | Path to SQLite database file |
+| `MEMORIX_TOOL_PROFILE` | `full` | Tool exposure profile: `full`, `omoc` (writer), `hermes` (reviewer) |
+| `MEMORIX_ALLOWED_TOOLS` | _(unset)_ | Explicit comma-separated allowlist override |
+| `MEMORIX_PREDICATE_ALIASES` | built-in aliases | Extra alias map, format: `likes:prefers,works for:works_at` |
+| `MEMORIX_PREDICATE_WHITELIST` | _(unset)_ | Comma-separated allowed predicates |
+| `MEMORIX_PREDICATE_WHITELIST_MODE` | `warn` | `off`, `warn`, or `enforce` |
 
 ### Database Schema
 

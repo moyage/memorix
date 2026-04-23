@@ -11,6 +11,9 @@ import {
   deriveCompactionTuning,
   estimateTokens,
   isSingleValuePredicate,
+  normalizePredicateName,
+  normalizePredicateToken,
+  getAllowedToolsForProfile,
   normalizeIdempotencyKey,
   normalizeLimit,
   parseCompactionCursor,
@@ -167,9 +170,34 @@ test('safeJsonParse returns fallback on invalid JSON', () => {
 test('single-value predicate registry works for mutable fields', () => {
   assert.equal(isSingleValuePredicate('status'), true);
   assert.equal(isSingleValuePredicate('prefers'), true);
+  assert.equal(isSingleValuePredicate('likes'), true);
   assert.equal(isSingleValuePredicate('knows'), false);
   const policies = new Map([['knows', 'single']]);
   assert.equal(isSingleValuePredicate('knows', policies), true);
+});
+
+test('normalizePredicateToken collapses casing and spaces', () => {
+  assert.equal(normalizePredicateToken('  Works At  '), 'works_at');
+});
+
+test('normalizePredicateName canonicalizes common synonyms', () => {
+  assert.equal(normalizePredicateName('likes'), 'prefers');
+  assert.equal(normalizePredicateName('works for'), 'works_at');
+});
+
+test('getAllowedToolsForProfile honors explicit allowlist', () => {
+  const original = process.env.MEMORIX_ALLOWED_TOOLS;
+  process.env.MEMORIX_ALLOWED_TOOLS = 'memorix_search_fts,memorix_get_context_pack,unknown_tool';
+  const tools = [{ name: 'memorix_search_fts' }, { name: 'memorix_get_context_pack' }, { name: 'memorix_store_fact' }];
+  const allowed = getAllowedToolsForProfile(tools);
+  assert.equal(allowed.has('memorix_search_fts'), true);
+  assert.equal(allowed.has('memorix_get_context_pack'), true);
+  assert.equal(allowed.has('memorix_store_fact'), false);
+  if (original === undefined) {
+    delete process.env.MEMORIX_ALLOWED_TOOLS;
+  } else {
+    process.env.MEMORIX_ALLOWED_TOOLS = original;
+  }
 });
 
 test('scoreActiveFact returns normalized score', () => {

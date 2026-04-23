@@ -88,6 +88,11 @@ npm run view -- --tree
 | 变量名 | 默认值 | 描述 |
 |----------|---------|-------------|
 | `MEMORIX_DB_PATH` | `./memorix.db` | SQLite 数据库文件存放路径 |
+| `MEMORIX_TOOL_PROFILE` | `full` | 工具暴露档位：`full`、`omoc`（执行写入）或 `hermes`（审查治理） |
+| `MEMORIX_ALLOWED_TOOLS` | _(未设置)_ | 显式逗号分隔工具白名单（覆盖 profile） |
+| `MEMORIX_PREDICATE_ALIASES` | 内置同义映射 | 额外同义词映射，格式：`likes:prefers,works for:works_at` |
+| `MEMORIX_PREDICATE_WHITELIST` | _(未设置)_ | 允许写入的谓词白名单（逗号分隔） |
+| `MEMORIX_PREDICATE_WHITELIST_MODE` | `warn` | `off`、`warn` 或 `enforce` |
 
 ### 数据库 Schema
 

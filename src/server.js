@@ -5,6 +5,13 @@ import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import { getDatabase } from './schema.js';
 
+function normalizePredicateToken(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '_');
+}
+
 function generateUUID() {
   return randomUUID();
 }
@@ -22,12 +29,49 @@ const DEFAULT_LIMITS = {
 };
 const MAX_LIMIT = 1000;
 const FRESHNESS_WINDOW_DAYS = 180;
+const DEFAULT_PREDICATE_ALIASES = new Map([
+  ['like', 'prefers'],
+  ['likes', 'prefers'],
+  ['liked', 'prefers'],
+  ['loves', 'prefers'],
+  ['love', 'prefers'],
+  ['enjoys', 'prefers'],
+  ['enjoy', 'prefers'],
+  ['works_for', 'works_at'],
+  ['work_for', 'works_at'],
+  ['resides_in', 'lives_in'],
+  ['live_in', 'lives_in']
+]);
+const TOOL_PROFILE = (process.env.MEMORIX_TOOL_PROFILE || 'full').trim().toLowerCase();
+const PREDICATE_WHITELIST_MODE = (process.env.MEMORIX_PREDICATE_WHITELIST_MODE || 'warn').trim().toLowerCase();
+const PREDICATE_WHITELIST = new Set(
+  (process.env.MEMORIX_PREDICATE_WHITELIST || '')
+    .split(',')
+    .map((item) => normalizePredicateToken(item))
+    .filter(Boolean)
+);
+const PREDICATE_ALIASES = (() => {
+  const aliases = new Map(DEFAULT_PREDICATE_ALIASES);
+  const raw = process.env.MEMORIX_PREDICATE_ALIASES || '';
+  if (!raw.trim()) {
+    return aliases;
+  }
+  for (const pair of raw.split(',')) {
+    const [fromRaw, toRaw] = pair.split(':');
+    const from = normalizePredicateToken(fromRaw);
+    const to = normalizePredicateToken(toRaw);
+    if (from && to) {
+      aliases.set(from, to);
+    }
+  }
+  return aliases;
+})();
 const DEFAULT_SINGLE_VALUE_PREDICATES = new Set(
   (process.env.MEMORIX_SINGLE_VALUE_PREDICATES || 'status,state,location,works_at,lives_in,preference,prefers')
     .split(',')
-    .map((item) => item.trim())
+    .map((item) => normalizePredicateToken(item))
     .filter(Boolean)
-    .map((item) => item.toLowerCase())
+    .map((item) => PREDICATE_ALIASES.get(item) || item)
 );
 const require = createRequire(import.meta.url);
 let tokenizerInitAttempted = false;
@@ -113,6 +157,86 @@ function normalizeContextTags(contextTags) {
   }
   const tags = [...new Set(raw.split(',').map((tag) => tag.trim()).filter(Boolean))];
   return tags.length > 0 ? tags.join(',') : null;
+}
+
+function normalizePredicateName(value, fieldName = 'predicate', options = {}) {
+  const { enforceWhitelist = true } = options;
+  const normalized = normalizePredicateToken(validateString(value, fieldName));
+  const canonical = PREDICATE_ALIASES.get(normalized) || normalized;
+  const whitelistEnabled = PREDICATE_WHITELIST.size > 0 && PREDICATE_WHITELIST_MODE !== 'off';
+  if (whitelistEnabled && !PREDICATE_WHITELIST.has(canonical)) {
+    const message = `predicate "${canonical}" is not allowed by MEMORIX_PREDICATE_WHITELIST`;
+    if (PREDICATE_WHITELIST_MODE === 'enforce' && enforceWhitelist) {
+      throw new Error(message);
+    }
+    if (PREDICATE_WHITELIST_MODE === 'warn') {
+      console.warn(`[Memorix Predicate Warning] ${message}`);
+    }
+  }
+  return canonical;
+}
+
+function normalizeOptionalPredicateName(value, fieldName = 'predicate', options = {}) {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  return normalizePredicateName(value, fieldName, options);
+}
+
+function getAllowedToolsForProfile(allTools) {
+  const all = new Set(allTools.map((tool) => tool.name));
+  const writer = new Set([
+    'memorix_store_fact',
+    'memorix_store_facts',
+    'memorix_search_fts',
+    'memorix_invalidate_fact',
+    'memorix_query_history',
+    'memorix_trace_relations',
+    'memorix_auto_memorize',
+    'memorix_get_context_pack',
+    'memorix_import_markdown',
+    'memorix_export_markdown',
+    'memorix_get_predicate_policies'
+  ]);
+  const reviewer = new Set([
+    'memorix_search_fts',
+    'memorix_query_history',
+    'memorix_trace_relations',
+    'memorix_get_context_pack',
+    'memorix_export_markdown',
+    'memorix_get_predicate_policies',
+    'memorix_set_predicate_policy',
+    'memorix_detect_contradictions',
+    'memorix_resolve_contradiction',
+    'memorix_rollback_resolution',
+    'memorix_rank_promotion_candidates',
+    'memorix_get_health_report',
+    'memorix_run_maintenance_sweep',
+    'memorix_recommend_compaction',
+    'memorix_compact_context_now',
+    'memorix_autotune_compaction_params',
+    'memorix_run_governance_cycle',
+    'memorix_get_governance_run',
+    'memorix_check_consistency'
+  ]);
+
+  if (process.env.MEMORIX_ALLOWED_TOOLS) {
+    const explicit = new Set(
+      process.env.MEMORIX_ALLOWED_TOOLS
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
+    );
+    return new Set([...explicit].filter((name) => all.has(name)));
+  }
+
+  if (['omoc', 'writer', 'execution'].includes(TOOL_PROFILE)) {
+    return new Set([...writer].filter((name) => all.has(name)));
+  }
+  if (['hermes', 'reviewer', 'audit'].includes(TOOL_PROFILE)) {
+    return new Set([...reviewer].filter((name) => all.has(name)));
+  }
+  return all;
 }
 
 function buildContextPack(records, perSubjectLimit = 4) {
@@ -230,7 +354,7 @@ function isSingleValuePredicate(predicate, policyMap) {
   if (!predicate) {
     return false;
   }
-  const normalized = String(predicate).trim().toLowerCase();
+  const normalized = PREDICATE_ALIASES.get(normalizePredicateToken(predicate)) || normalizePredicateToken(predicate);
   if (policyMap && policyMap.has(normalized)) {
     return policyMap.get(normalized) === 'single';
   }
@@ -285,7 +409,7 @@ function detectContradictionsInFacts(facts, policyMap) {
   const groups = new Map();
 
   for (const fact of facts) {
-    const predicate = String(fact.predicate || '').trim().toLowerCase();
+    const predicate = PREDICATE_ALIASES.get(normalizePredicateToken(fact.predicate)) || normalizePredicateToken(fact.predicate);
     if (!isSingleValuePredicate(predicate, policyMap)) {
       continue;
     }
@@ -1026,34 +1150,37 @@ function createServer() {
     }
   });
 
+  const allTools = [
+    storeFactTool,
+    storeFactsTool,
+    searchFtsTool,
+    invalidateFactTool,
+    queryHistoryTool,
+    traceRelationsTool,
+    autoMemorizeTool,
+    contextPackTool,
+    importMarkdownTool,
+    exportMarkdownTool,
+    getPredicatePoliciesTool,
+    setPredicatePolicyTool,
+    detectContradictionsTool,
+    resolveContradictionTool,
+    rollbackResolutionTool,
+    rankPromotionCandidatesTool,
+    healthReportTool,
+    maintenanceSweepTool,
+    compactionRecommendationTool,
+    compactNowTool,
+    autotuneCompactionTool,
+    governanceCycleTool,
+    consistencyCheckTool,
+    governanceRunStatusTool
+  ];
+  const allowedTools = getAllowedToolsForProfile(allTools);
+
   server.setRequestHandler('tools/list', async () => {
     return {
-      tools: [
-        storeFactTool,
-        storeFactsTool,
-        searchFtsTool,
-        invalidateFactTool,
-        queryHistoryTool,
-        traceRelationsTool,
-        autoMemorizeTool,
-        contextPackTool,
-        importMarkdownTool,
-        exportMarkdownTool,
-        getPredicatePoliciesTool,
-        setPredicatePolicyTool,
-        detectContradictionsTool,
-        resolveContradictionTool,
-        rollbackResolutionTool,
-        rankPromotionCandidatesTool,
-        healthReportTool,
-        maintenanceSweepTool,
-        compactionRecommendationTool,
-        compactNowTool,
-        autotuneCompactionTool,
-        governanceCycleTool,
-        consistencyCheckTool,
-        governanceRunStatusTool
-      ]
+      tools: allTools.filter((tool) => allowedTools.has(tool.name))
     };
   });
 
@@ -1221,7 +1348,8 @@ function createServer() {
     predicatePolicyMap.set(predicate, 'single');
   }
   for (const row of getPredicatePoliciesStmt.all()) {
-    predicatePolicyMap.set(String(row.predicate).toLowerCase(), row.mode);
+    const key = PREDICATE_ALIASES.get(normalizePredicateToken(row.predicate)) || normalizePredicateToken(row.predicate);
+    predicatePolicyMap.set(key, row.mode);
   }
 
   function computeCompactionRecommendation(inputArgs = {}) {
@@ -1336,12 +1464,14 @@ function createServer() {
     if (prioritizeContradictions) {
       const groups = detectContradictionsInFacts(rows, predicatePolicyMap);
       for (const group of groups) {
-        contradictionKeys.add(`${String(group.subject).toLowerCase()}|${String(group.predicate).toLowerCase()}`);
+        const predicate = PREDICATE_ALIASES.get(normalizePredicateToken(group.predicate)) || normalizePredicateToken(group.predicate);
+        contradictionKeys.add(`${String(group.subject).toLowerCase()}|${predicate}`);
       }
     }
     const scoredRows = enrichFactsWithQuality(rows)
       .map((row) => {
-        const key = `${String(row.subject).toLowerCase()}|${String(row.predicate).toLowerCase()}`;
+        const predicate = PREDICATE_ALIASES.get(normalizePredicateToken(row.predicate)) || normalizePredicateToken(row.predicate);
+        const key = `${String(row.subject).toLowerCase()}|${predicate}`;
         const contradictionBoost = prioritizeContradictions && contradictionKeys.has(key) ? 0.15 : 0;
         return {
           ...row,
@@ -1393,7 +1523,7 @@ function createServer() {
 
   function storeFactWithPolicy(rawFact, defaultPolicy = false) {
     const subject = validateString(rawFact.subject, 'subject');
-    const predicate = validateString(rawFact.predicate, 'predicate');
+    const predicate = normalizePredicateName(rawFact.predicate, 'predicate');
     const object = validateString(rawFact.object, 'object');
     const contextTags = normalizeContextTags(rawFact.context_tags);
     const source = normalizeOptionalString(rawFact.source, 'source');
@@ -1514,6 +1644,9 @@ function createServer() {
 
   server.setRequestHandler('tools/call', async ({ name, arguments: args }) => {
     try {
+    if (!allowedTools.has(name)) {
+      throw new Error(`Tool "${name}" is not enabled for profile "${TOOL_PROFILE}"`);
+    }
     if (name === 'memorix_store_fact') {
       const result = storeFactWithPolicy(args);
       
@@ -1660,7 +1793,7 @@ function createServer() {
       const params = [startSubject, maxHops, limit];
       
       if (args.predicate_filter) {
-        const predicateFilter = validateString(args.predicate_filter, 'predicate_filter');
+        const predicateFilter = normalizePredicateName(args.predicate_filter, 'predicate_filter', { enforceWhitelist: false });
         const filteredSql = sql.replace(
           'WHERE subject = ? AND valid_to IS NULL',
           'WHERE subject = ? AND predicate = ? AND valid_to IS NULL'
@@ -1806,13 +1939,15 @@ function createServer() {
       if (prioritizeContradictions) {
         const groups = detectContradictionsInFacts(rows, predicatePolicyMap);
         for (const group of groups) {
-          contradictionKeys.add(`${String(group.subject).toLowerCase()}|${String(group.predicate).toLowerCase()}`);
+          const predicate = PREDICATE_ALIASES.get(normalizePredicateToken(group.predicate)) || normalizePredicateToken(group.predicate);
+          contradictionKeys.add(`${String(group.subject).toLowerCase()}|${predicate}`);
         }
       }
 
       const scoredRows = enrichFactsWithQuality(rows)
         .map((row) => {
-          const key = `${String(row.subject).toLowerCase()}|${String(row.predicate).toLowerCase()}`;
+          const predicate = PREDICATE_ALIASES.get(normalizePredicateToken(row.predicate)) || normalizePredicateToken(row.predicate);
+          const key = `${String(row.subject).toLowerCase()}|${predicate}`;
           const contradictionBoost = prioritizeContradictions && contradictionKeys.has(key) ? 0.15 : 0;
           return {
             ...row,
@@ -1959,9 +2094,9 @@ function createServer() {
     }
 
     if (name === 'memorix_get_predicate_policies') {
-      const predicate = normalizeOptionalString(args.predicate, 'predicate');
+      const predicate = normalizeOptionalPredicateName(args.predicate, 'predicate', { enforceWhitelist: false });
       if (predicate) {
-        const normalized = predicate.toLowerCase();
+        const normalized = predicate;
         const row = getPredicatePolicyStmt.get(normalized);
         return {
           content: [{
@@ -1985,7 +2120,8 @@ function createServer() {
         combined.set(row.predicate, row);
       }
       for (const row of rows) {
-        combined.set(String(row.predicate).toLowerCase(), { predicate: String(row.predicate).toLowerCase(), mode: row.mode, source: 'db', updated_at: row.updated_at });
+        const normalized = PREDICATE_ALIASES.get(normalizePredicateToken(row.predicate)) || normalizePredicateToken(row.predicate);
+        combined.set(normalized, { predicate: normalized, mode: row.mode, source: 'db', updated_at: row.updated_at });
       }
       return {
         content: [{
@@ -1996,7 +2132,7 @@ function createServer() {
     }
 
     if (name === 'memorix_set_predicate_policy') {
-      const predicate = validateString(args.predicate, 'predicate').toLowerCase();
+      const predicate = normalizePredicateName(args.predicate, 'predicate');
       const mode = validateString(args.mode, 'mode', 16).toLowerCase();
       if (!['single', 'multi'].includes(mode)) {
         throw new Error('mode must be one of: single, multi');
@@ -2014,13 +2150,16 @@ function createServer() {
     if (name === 'memorix_detect_contradictions') {
       const limit = normalizeLimit(args.limit, 100);
       const subject = normalizeOptionalString(args.subject, 'subject');
-      const predicate = normalizeOptionalString(args.predicate, 'predicate')?.toLowerCase();
+      const predicate = normalizeOptionalPredicateName(args.predicate, 'predicate', { enforceWhitelist: false });
       let rows = getActiveFactsForContradictionsStmt.all();
       if (subject) {
         rows = rows.filter((row) => row.subject === subject);
       }
       if (predicate) {
-        rows = rows.filter((row) => String(row.predicate).toLowerCase() === predicate);
+        rows = rows.filter((row) => {
+          const normalized = PREDICATE_ALIASES.get(normalizePredicateToken(row.predicate)) || normalizePredicateToken(row.predicate);
+          return normalized === predicate;
+        });
       }
       const contradictions = detectContradictionsInFacts(rows, predicatePolicyMap).slice(0, limit);
       return {
@@ -2033,7 +2172,7 @@ function createServer() {
 
     if (name === 'memorix_resolve_contradiction') {
       const subject = validateString(args.subject, 'subject');
-      const predicate = validateString(args.predicate, 'predicate').toLowerCase();
+      const predicate = normalizePredicateName(args.predicate, 'predicate');
       const keepObject = normalizeOptionalString(args.keep_object, 'keep_object');
       const keepLatest = args.keep_latest === undefined ? true : Boolean(args.keep_latest);
       const facts = getActiveFactsBySubjectPredicateStmt.all(subject, predicate);
@@ -2199,7 +2338,7 @@ function createServer() {
       });
       const contradictionByPredicate = new Map();
       for (const item of contradictions) {
-        const key = String(item.predicate).toLowerCase();
+        const key = PREDICATE_ALIASES.get(normalizePredicateToken(item.predicate)) || normalizePredicateToken(item.predicate);
         contradictionByPredicate.set(key, (contradictionByPredicate.get(key) || 0) + 1);
       }
 
@@ -2225,14 +2364,17 @@ function createServer() {
       const dryRun = args.dry_run === undefined ? true : Boolean(args.dry_run);
       const limit = normalizeLimit(args.limit, DEFAULT_LIMITS.maintenance);
       const subject = normalizeOptionalString(args.subject, 'subject');
-      const predicate = normalizeOptionalString(args.predicate, 'predicate')?.toLowerCase();
+      const predicate = normalizeOptionalPredicateName(args.predicate, 'predicate', { enforceWhitelist: false });
 
       let activeRows = getActiveFactsForContradictionsStmt.all();
       if (subject) {
         activeRows = activeRows.filter((row) => row.subject === subject);
       }
       if (predicate) {
-        activeRows = activeRows.filter((row) => String(row.predicate).toLowerCase() === predicate);
+        activeRows = activeRows.filter((row) => {
+          const normalized = PREDICATE_ALIASES.get(normalizePredicateToken(row.predicate)) || normalizePredicateToken(row.predicate);
+          return normalized === predicate;
+        });
       }
       const groups = detectContradictionsInFacts(activeRows, predicatePolicyMap).slice(0, limit);
       const groupFactCount = groups.reduce((sum, group) => sum + Number(group.fact_count || 0), 0);
@@ -2432,14 +2574,17 @@ function createServer() {
         if (runMaintenance) {
           const limit = normalizeLimit(args.limit, DEFAULT_LIMITS.maintenance);
           const subject = normalizeOptionalString(args.subject, 'subject');
-          const predicate = normalizeOptionalString(args.predicate, 'predicate')?.toLowerCase();
+          const predicate = normalizeOptionalPredicateName(args.predicate, 'predicate', { enforceWhitelist: false });
 
           let activeRows = getActiveFactsForContradictionsStmt.all();
           if (subject) {
             activeRows = activeRows.filter((row) => row.subject === subject);
           }
           if (predicate) {
-            activeRows = activeRows.filter((row) => String(row.predicate).toLowerCase() === predicate);
+            activeRows = activeRows.filter((row) => {
+              const normalized = PREDICATE_ALIASES.get(normalizePredicateToken(row.predicate)) || normalizePredicateToken(row.predicate);
+              return normalized === predicate;
+            });
           }
           const groups = detectContradictionsInFacts(activeRows, predicatePolicyMap).slice(0, limit);
           const actions = [];
@@ -2554,13 +2699,16 @@ function createServer() {
 
     if (name === 'memorix_check_consistency') {
       const subject = normalizeOptionalString(args.subject, 'subject');
-      const predicate = normalizeOptionalString(args.predicate, 'predicate')?.toLowerCase();
+      const predicate = normalizeOptionalPredicateName(args.predicate, 'predicate', { enforceWhitelist: false });
       let activeRows = getActiveFactsForContradictionsStmt.all();
       if (subject) {
         activeRows = activeRows.filter((row) => row.subject === subject);
       }
       if (predicate) {
-        activeRows = activeRows.filter((row) => String(row.predicate).toLowerCase() === predicate);
+        activeRows = activeRows.filter((row) => {
+          const normalized = PREDICATE_ALIASES.get(normalizePredicateToken(row.predicate)) || normalizePredicateToken(row.predicate);
+          return normalized === predicate;
+        });
       }
       const summary = buildConsistencySummary(activeRows, predicatePolicyMap);
       return {
@@ -2614,6 +2762,9 @@ export {
   isSingleValuePredicate,
   normalizeIdempotencyKey,
   normalizeLimit,
+  normalizePredicateName,
+  normalizePredicateToken,
+  normalizeOptionalPredicateName,
   parseCompactionCursor,
   parseStructuredMarkdownTriples,
   safeJsonParse,
@@ -2621,6 +2772,7 @@ export {
   selectKeepFactForResolution,
   scoreActiveFact,
   scorePromotionCandidate,
+  getAllowedToolsForProfile,
   summarizePackQuality,
   validateString
 };
